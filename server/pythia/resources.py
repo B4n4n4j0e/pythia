@@ -70,6 +70,11 @@ service_sum_resource_fields = {
     'counter': fields.Integer,
 }
 
+summary_resource_fields = {
+    'ts': fields.Float,
+    'counter': fields.Integer,
+}
+
 
 class DNSEntries(Resource):
     @marshal_with(dns_resource_fields)
@@ -95,7 +100,12 @@ api.add_resource(DNSEntry, '/dns-entry/<string:dns_uid>')
 class Connections(Resource):
     @marshal_with(connection_resource_fields)
     def get(self):
-        return ConnectionModel.query.all()
+        start_time = request.args.get('start-time')
+        end_time = request.args.get('end-time')
+        if (start_time and end_time):
+            return ConnectionModel.query.filter(ConnectionModel.ts >= start_time, ConnectionModel.ts <= end_time).all()
+        else:
+            return ConnectionModel.query.all()
 
 
 api.add_resource(Connections, '/connections')
@@ -117,8 +127,12 @@ api.add_resource(Connection, '/connection/<string:connection_uid>')
 class Notices(Resource):
     @marshal_with(notice_resource_fields)
     def get(self):
-        return NoticeModel.query.all()
-
+        start_time = request.args.get('start-time')
+        end_time = request.args.get('end-time')
+        if (start_time and end_time):
+            return NoticeModel.query.filter(NoticeModel.ts >= start_time, NoticeModel.ts <= end_time).all()
+        else:
+            return NoticeModel.query.all()
 
 api.add_resource(Notices, '/notices')
 
@@ -279,6 +293,23 @@ class IpKilobyteSum(Resource):
 api.add_resource(IpKilobyteSum, '/ip-kilobyte-sum')
 
 
+class ConnectionSummary(Resource):
+    @marshal_with(summary_resource_fields)
+    def get(self):
+        start_time = request.args.get('start-time')
+        end_time = request.args.get('end-time')
+
+        if (start_time and end_time):
+            query = "SELECT ts,COUNT(*) as counter FROM conn WHERE ts >=? AND " \
+                    "ts <= ? GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
+            return get_data(query, ConnectionHourEntry, (start_time, end_time))
+        else:
+            query = "SELECT ts,COUNT(*) as counter FROM conn GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
+            return get_data(query, ConnectionHourEntry, [])
+
+api.add_resource(ConnectionSummary, '/connection-summary')
+
+
 def get_data(query, cl, parameter):
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -288,6 +319,7 @@ def get_data(query, cl, parameter):
     rows = cur.execute(query, parameter)
     result = []
     for row in rows:
+        print(row)
         result.append(cl(*row))
     if not result:
         abort(404, message=cl.error_message)

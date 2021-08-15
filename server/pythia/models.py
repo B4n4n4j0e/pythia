@@ -1,5 +1,6 @@
 from pythia import db
 from sqlalchemy.dialects.sqlite import FLOAT
+from _datetime import datetime
 
 class DnsModel(db.Model):
     __tablename__ = 'dns'
@@ -35,6 +36,7 @@ class NoticeModel(db.Model):
     uid = db.Column('uid',db.String, primary_key=True)
     note = db.Column('note',db.String)
     msg = db.Column('msg', db.String)
+    connection = db.relationship('ConnectionModel', uselist=False, lazy=True, viewonly=True)
 
     def __repr__(self):
         return f"Notice({self.ts},'{self.note}','{self.msg}')"
@@ -124,3 +126,12 @@ class PortsOfInterestEntry:
 
     def __repr__(self):
         return f" PortsOfInterestEntry({self.p}/{self.prot},{self.counter}) "
+
+class ConnectionHourEntry:
+    error_message = 'Could not find any connection entry'
+
+    def __init__(self, ts, counter):
+            self.ts = ts
+            self.counter = counter
+    def __repr__(self):
+     return f" connectionHourSummary('{self.ts}',{self.counter}) "

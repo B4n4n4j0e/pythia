@@ -36,8 +36,6 @@ export default {
         }
       });
 
-
-
    var color = d3.scaleOrdinal()
         .domain(pieData.entries())
         .range(d3.schemeDark2)

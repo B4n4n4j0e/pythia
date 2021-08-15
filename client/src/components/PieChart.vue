@@ -283,7 +283,7 @@ export default {
           if (position[0] != element[0]) {
             return false;
           }
-            return Math.abs(position[1]) - Math.abs(element[1]) < 2 && Math.abs(position[1]) - Math.abs(element[1]) > -2;
+            return Math.abs(position[1]) - Math.abs(element[1]) < 5 && Math.abs(position[1]) - Math.abs(element[1]) > -5;
           
         }
     

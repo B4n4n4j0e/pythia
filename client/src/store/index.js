@@ -2,7 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex';
 import ConnectionsService from '../services/ConnectionService';
 import NoticeService from '../services/NoticeService';
-
+import ConnectionSummaryService from '../services/ConnectionSummaryService';
 
 Vue.use(Vuex);
 
@@ -13,6 +13,7 @@ export default new Vuex.Store({
         endTime: null,
         globalPacketCount: 0,
         notices: [],
+        connectionSummary:[]
     },
 
 
@@ -21,21 +22,11 @@ export default new Vuex.Store({
             state.connections = newConnections;
         },
         setNotices (state, notices) {
-            notices.forEach(element => {
-                if (element.uid === "-") {
-                    return
-                }
-                else {
-                    var found = state.connections.find(connElement => element.uid == connElement.uid)
-                    if (found) {
-                    element['source'] = found['source']
-                    element['id.orig_p'] = found['id.orig_p']
-                    element['target'] = found['target']
-                    element['id.resp_p'] = found['id.resp_p']
-                }
-                }
-            });
             state.notices = notices;
+        },
+
+        setConnectionSummary (state, connectionSummary) {
+            state.connectionSummary = connectionSummary;
         },
 
         setGlobalPacketCount (state, globalPacketCount) {
@@ -65,7 +56,28 @@ export default new Vuex.Store({
         })
         },
 
+        getConnectionSummaryByTime(context) {
+            ConnectionSummaryService.getConnectionSummary(context.state.startTime,context.state.endTime).then((response) => {
+                response.data.forEach(element => {
+                    element.ts = new Date(element.ts*1000)
+                })
+                context.commit('setConnectionSummary',response.data);
+            })
+
+        },
+
         getDashboardDataByTime(context) {
+            NoticeService.getNotices(context.state.startTime, context.state.endTime).then((response) => {
+                context.commit('setNotices',response.data)
+            })
+            //@todo mit dispatch verbinden und rauswerfen...
+            ConnectionSummaryService.getConnectionSummary(context.state.startTime,context.state.endTime).then((response) => {
+                response.data.forEach(element => {
+                    element.ts = new Date(element.ts*1000)
+                })
+                context.commit('setConnectionSummary',response.data);
+            })
+
             ConnectionsService.getConnections(context.state.startTime,context.state.endTime).then((response) => {
                 context.commit('setConnections',response.data);
                 context.commit('setGlobalPacketCount', context.state.connections.length)
@@ -126,6 +138,7 @@ export default new Vuex.Store({
             }
             return null
         },
+
 
         pieData: state => {
             var data = new Map()

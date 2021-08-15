@@ -13,10 +13,8 @@
        <span style="font-weight:bold"> message: </span> {{item.msg}}  <br>
        <span style="font-weight:bold"> connection uid: </span> {{item.uid}} <br>
        <div v-if="item.uid != '-'" >
-       <span style="font-weight:bold"> Source IP: </span> {{ item['source'] }}  <br>
-       <span style="font-weight:bold"> Source Port: </span> {{ item['id.orig_p'] }} <br>
-        <span style="font-weight:bold"> Destination IP: </span> {{ item['target'] }}  <br>
-       <span style="font-weight:bold"> Destination Port: </span> {{item['id.resp_p']}} <br>
+       <span style="font-weight:bold"> Source IP: </span> {{ item['connection.origin_host'] }}  <br>
+        <span style="font-weight:bold"> Destination IP: </span> {{ item['connection.resp_host'] }}  <br>
         </div>
 
       </v-expansion-panel-content>
@@ -27,6 +25,7 @@
 </template>
 
 <script>
+
 export default {
 
   data: () => ({

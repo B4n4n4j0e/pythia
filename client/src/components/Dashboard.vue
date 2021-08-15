@@ -127,6 +127,9 @@
   <v-col cols="4">
       <BarChart/>
   </v-col>
+  <v-col>
+    <LineChart/>
+  </v-col>
 
 </v-row>
 <v-row>
@@ -142,14 +145,15 @@
 <script>
 import PieChart from './PieChart.vue';
 import BarChart from './BarChart.vue'
-
+import LineChart from './LineChart.vue'
 import Notices from './Notices.vue';
 
   export default {
     components:{
       BarChart,
       PieChart,
-      Notices
+      Notices,
+      LineChart
     },
 
     name: 'Dashboard',
@@ -194,8 +198,6 @@ import Notices from './Notices.vue';
         timestamp = new Date(date[0],date[1]-1,date[2],time[0],time[1],0).getTime()
         this.$store.commit('setEndTime',timestamp)
         this.$store.dispatch('getDashboardDataByTime')
-
-
       }
   
   }}
