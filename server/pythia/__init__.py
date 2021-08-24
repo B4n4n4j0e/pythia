@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 #@todo delete CORS
 app = Flask(__name__)
-cors = CORS(app, resources={r"/*": {"origins": "*"}})
+cors = CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pythia.sqlite'
 api = Api(app)
 db = SQLAlchemy(app)

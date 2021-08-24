@@ -1,7 +1,7 @@
 <template>
   <v-card>
-    <v-btn  @click="updateChart">clickMe</v-btn>
-    <svg id="pieChart" viewBox="0 0 960 450"></svg>
+    <v-btn @click="updateChart">clickMe</v-btn>
+    <svg :id="id" viewBox="0 0 800 450"></svg>
   </v-card>
 </template>
 
@@ -9,58 +9,64 @@
 import * as d3 from "d3";
 
 export default {
+  name: "PieChart",
+  props: {
+    data: {
+      required: true,
+    },
+    width: {
+      default: 800,
+      type: Number,
+    },
+    height: {
+      default: 450,
+      type: Number,
+    },
+    chartNumber: {
+      required: true,
+      type: Number,
+    },
+  },
 
-  data: () => ({
-    width: 960,
-    height: 450,
-  }),
+  data: () => ({}),
 
   computed: {
-
-    globalPacketCount() {
-      return this.$store.state.globalPacketCount
+    id() {
+      return "chart" + this.chartNumber.toString();
     },
-
-    pieData() {
-    
-     return this.$store.getters.pieData
-    }
-
-
   },
-    watch: {
-    pieData: function() {
-      this.updateChart()
-    }
-    
-
+  watch: {
+    data: function () {
+      this.updateChart();
+    },
   },
 
   mounted() {
-    this.createPieChart()
-
+    this.createPieChart();
   },
   methods: {
     createPieChart() {
-  
-      var svg = d3.select("#pieChart").append("g");
-      svg.append("g").attr("class", "slices");
-      svg.append("g").attr("class", "labels");
-      svg.append("g").attr("class", "lines");
+      var svg = d3.select("#" + this.id).append("g");
+      svg.append("g").attr("class", "slices" + this.chartNumber);
+      svg.append("g").attr("class", "labels" + this.chartNumber);
+      svg.append("g").attr("class", "lines" + this.chartNumber);
 
       svg.attr(
         "transform",
-        "translate(" + this.width / 2.5 + "," + this.height / 2 + ")"
+        "translate(" + this.width / 2 + "," + this.height / 2 + ")"
       );
-
     },
 
     updateChart() {
-      var radius =  Math.min(this.width, this.height) / 2; 
-      var svg = d3.select("#pieChart")
+      var radius = Math.min(this.width, this.height) / 2;
+      var svg = d3.select("#" + this.id);
       var color = d3
         .scaleOrdinal()
-        .domain(this.pieData.entries())
+        .domain(
+          this.data.map(function (d) {
+            return d.name;
+          })
+        )
         .range([
           "#98abc5",
           "#8a89a6",
@@ -70,21 +76,24 @@ export default {
           "#d0743c",
           "#ff8c00",
         ]);
-      var globalPacketCount = this.$store.state.globalPacketCount
-      var  data = color.domain().map(function (label) {
-          var packetCount = label[1];
-          return {
-            label: label[0],
-            packetCount: packetCount,
-            percentage: ((packetCount / globalPacketCount) * 100).toFixed(1),
-          };
-        });
+      var globalPacketCount = this.data.reduce(function (a, b) {
+        return a + b.value;
+      }, 0);
 
-        var pie = d3
+      var data = this.data.map(function (label) {
+        var packetCount = label.value;
+        return {
+          label: label.name,
+          packetCount: packetCount,
+          percentage: ((packetCount / globalPacketCount) * 100).toFixed(1),
+        };
+      });
+
+      var pie = d3
         .pie()
         .sort(null)
         .value(function (d) {
-          return d.packetCount;
+          return d.packetCount*1.1;
         })
         .padAngle(0.025);
 
@@ -102,191 +111,217 @@ export default {
         return d.data.label;
       };
 
-        var slice = svg
-          .select("g.slices")
-          .selectAll("path.slice")
-          .data(pie(data), key);
+      var slice = svg
+        .select("g.slices" + this.chartNumber)
+        .selectAll("path.slice" + this.chartNumber)
+        .data(pie(data, key));
 
-        slice
-          .enter()
-          .insert("path")
-          .style("fill", function (d) {
-            return color(d.data.label);
-          })
-          .attr("class", "slice")
-          .attr("d", function (d) {
-            this._current = d;
-            return arc(d)
-            })
+      slice
+        .enter()
+        .insert("path")
+        .style("fill", function (d) {
+          return color(d.data.label);
+        })
+        .attr("class", "slice" + this.chartNumber)
+        .attr("d", function (d) {
+          this._current = d;
+          return arc(d);
+        });
 
+      slice
+        .transition()
+        .duration(1000)
+        .attrTween("d", function (d) {
+          this._current = this._current || d;
+          var interpolate = d3.interpolate(this._current, d);
+          this._current = interpolate(0);
+          return function (t) {
+            return arc(interpolate(t));
+          };
+        });
 
-      slice.transition()
-          .duration(1000)
-          .attrTween("d", function (d) {
-            this._current = this._current || d;   
-            var interpolate = d3.interpolate(this._current, d);
-            this._current = interpolate(0);
-            return function (t) {
-              return arc(interpolate(t));
-            };
-          });
+      slice.exit().remove();
+      /* ------- TEXT LABELS -------*/
 
-        slice.exit().remove();
-        /* ------- TEXT LABELS -------*/
+      var textPositions = new Map();
+      var linePositions = new Map();
 
-        var positions = [];
+      var text = svg
+        .select(".labels" + this.chartNumber)
+        .selectAll("text")
+        .data(pie(data), key);
+      function midAngle(d) {
+        return d.startAngle + (d.endAngle - d.startAngle) / 2;
+      }
 
-        var text = svg
-          .select(".labels")
-          .selectAll("text")
-          .data(pie(data), key);
-
-        function midAngle(d) {
-          return d.startAngle + (d.endAngle - d.startAngle) / 2;
-        }
-        
-        text
-          .enter()
-          .append("text")
-          .attr("dy", ".35em")
-          .text(function (d) {
-            return (
-              d.data.label +
-              " / " +
-              d.data.packetCount +
-              " / " +
-              d.data.percentage +
-              " %"
-            );
-          })
-          .attr("transform", function(d) {
-            this._current = d;
-            var element = outerArc.centroid(d)
-            element[0] = radius * (midAngle(d) < Math.PI ? 1 : -1);
-              positions.forEach(pos => {
-               while (checkCollition(element,pos)){
-                element[1] = element[1]+20
-            }
-            })
-            positions.push(element)
-            return "translate(" + element[0] +"," + (element[1]) +")";
-
-          })
-          .style("text-anchor", function (d) {
-              this._current = d;
-              return midAngle(d) < Math.PI ? "start" : "end";
-          });
-
-          text
-          .transition()
-          .duration(1000)
-          .text(function (d) {
-            return (
-              d.data.label +
-              " / " +
-              d.data.packetCount +
-              " / " +
-              d.data.percentage +
-              " %"
-            );
-          })
-          .attrTween("transform", function (d) {
-            this._current = this._current || d;
-            var interpolate = d3.interpolate(this._current, d);
-            this._current = interpolate(0);
-            var collisionOffset = 0;
-            var element = outerArc.centroid(interpolate(1))
-            element[0]= radius * (midAngle(interpolate(1)) < Math.PI ? 1 : -1);
-            positions.forEach(pos => {
-               while (checkCollition(element,pos)){
-                collisionOffset +=20;
-                element[1] = element[1]+20
-            }
-            })
-            positions.push(element)
-            return function (t) {
-              var d2 = interpolate(t);
-              var pos = outerArc.centroid(d2);
-              pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
-              return "translate(" + pos[0] +","+ (pos[1]+collisionOffset) + ")";
-            };
-          })
-          .styleTween("text-anchor", function (d) {
-            this._current = this._current || d;
-            var interpolate = d3.interpolate(this._current, d);
-            this._current = interpolate(0);
-            return function (t) {
-              var d2 = interpolate(t);
-              return midAngle(d2) < Math.PI ? "start" : "end";
-            };
+      text
+        .enter()
+        .append("text")
+        .attr("dy", ".35em")
+        .text(function (d) {
+          return (
+            d.data.label +
+            " / " +
+            d.data.packetCount +
+            " / " +
+            d.data.percentage +
+            " %"
+          );
+        })
+        .attr("transform", function (d,index) {
+          var offset = 2;
+          var element = outerArc.centroid(d);
+          element[0] = radius * (midAngle(d) < Math.PI ? 1 : -1);
+          while (checkCollisions(element, textPositions)) {
+            element[1] += offset;
           }
-     );
+          element.push(offset)
+          textPositions.set(index,element);
+          return "translate(" + element[0] + "," + element[1] + ")";
+        })
+        .style("text-anchor", function (d) {
+          this._current = d;
+          return midAngle(d) < Math.PI ? "start" : "end";
+        });
 
-        text.exit().remove();
+      text
+        .transition()
+        .duration(1000)
+        .text(function (d) {
+          this._current = this._current || d;
+          return (
+            d.data.label +
+            " / " +
+            d.data.packetCount +
+            " / " +
+            d.data.percentage +
+            " %"
+          );
+        })
+        .attrTween("transform", function (d, index) {
+          var offset = 2;
+          this._current = this._current || d;
+          var interpolate = d3.interpolate(this._current, d);
+          this._current = interpolate(0);
+          var element = outerArc.centroid(interpolate(1));
+          element[0] = radius * (midAngle(interpolate(1)) < Math.PI ? 1 : -1);
+          var j = 0;
+          while (checkCollisions(element, textPositions)) {
+            element[1] += offset;
+            j++;
+          }
+          offset = j * offset;
+          element.push(offset)
+          textPositions.set(index,element);
+          return function (t) {
+            var d2 = interpolate(t);
+            var pos = outerArc.centroid(d2);
+            pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+            pos[1] += textPositions.get(index)[2];
+            return "translate(" + pos[0] + "," + pos[1] + ")";
+          };
+        })
+        .styleTween("text-anchor", function (d) {
+          this._current = this._current || d;
+          var interpolate = d3.interpolate(this._current, d);
+          this._current = interpolate(0);
+          return function (t) {
+            var d2 = interpolate(t);
+            return midAngle(d2) < Math.PI ? "start" : "end";
+          };
+        });
 
-        /* ------- SLICE TO TEXT POLYLINES -------*/
-        var polyline = svg
-          .select(".lines")
-          .selectAll("polyline")
-          .data(pie(data), key);
-        
-        polyline
-          .enter()
-          .append("polyline")
-          .attr("points",function (d) {
-            var element = outerArc.centroid(d)
-            element[0]= radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            positions.forEach(pos => {
-               while (checkCollition(element,pos)){
-                element[1] = element[1]+20
-            }})
-                        positions.push(element)
+      text.exit().remove();
 
-              return [arc.centroid(d), outerArc.centroid(d), element];
-            })
-          .attr("stroke-width", "2px")
-          .attr("fill", "none")
-          .attr("stroke", "black");
+      /* ------- SLICE TO TEXT POLYLINES -------*/
+      var polyline = svg
+        .select(".lines" + this.chartNumber)
+        .selectAll("polyline")
+        .data(pie(data), key);
 
+      polyline
+        .enter()
+        .append("polyline")
+        .attr("points", function (d,index) {
+          this._current = this._current || d;
+          var offset = 2;
+          var element = outerArc.centroid(d);
+          element[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
+          var j=0
+          while (checkCollisions(element, linePositions)) {
+            element[1] += offset;
+            j++
+          }
+          offset = j*offset
+          element.push(offset)
+          linePositions.set(index,element);
 
-        polyline
-          .transition()
-          .duration(1000)
-          .attrTween("points", function (d) {
-            this._current = this._current || d;
-            var interpolate = d3.interpolate(this._current, d);
-            this._current = interpolate(0);
-            var collisionOffset = 0
-            var element = outerArc.centroid(interpolate(1))
-            element[0]= radius * 0.95 * (midAngle(interpolate(1)) < Math.PI ? 1 : -1);
-            positions.forEach(pos => {
-               while (checkCollition(element,pos)){
-                collisionOffset +=20;
-                element[1] = element[1]+20
-            }})
-              positions.push(element)
-            return function (t) {
-              var d2 = interpolate(t);
-              var pos = outerArc.centroid(d2);
-              pos[1] = pos[1]+ collisionOffset
-              pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
-              return [arc.centroid(d2), outerArc.centroid(d2), pos];
-            };
-          })
-          .attr("stroke-width", "2px")
-          .attr("fill", "none")
-          .attr("stroke", "black");
+          return [arc.centroid(d), outerArc.centroid(d), [element[0], [element[1]]] ];
+        })
+        .attr("stroke-width", "2px")
+        .attr("fill", "none")
+        .attr("stroke", "black");
 
-        polyline.exit().remove();
+      polyline
+        .transition()
+        .duration(1000)
+        .attrTween("points", function (d, index) {
+          this._current = this._current || d;
+          var interpolate = d3.interpolate(this._current, d);
+          this._current = interpolate(0);
+          var element = outerArc.centroid(interpolate(1));
+          element[0] =
+            radius * 0.95 * (midAngle(interpolate(1)) < Math.PI ? 1 : -1);
+          var j = 0;
+          var offset = 2;
+          while (checkCollisions(element, linePositions)) {
+            element[1] += offset;
+            j++;
+          }
+          offset = j * offset;
+          element.push(offset)
+          linePositions.set(index,element);
 
-        function checkCollition(position, element) {
+          return function (t) {
+            var d2 = interpolate(t);
+            var pos = outerArc.centroid(d2);
+            pos[1] = pos[1] + linePositions.get(index)[2]
+            pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+            return [arc.centroid(d2), outerArc.centroid(d2), pos];
+          };
+        })
+        .attr("stroke-width", "2px")
+        .attr("fill", "none")
+        .attr("stroke", "black");
+
+      polyline.exit().remove();
+
+      function checkCollisions(element, positions) {
+        for (let index = 0; index < data.size || index < positions.size; index++) {
+              
+          if (!positions.has(index)) {
+            positions.set(index,[0,0])
+
+          }
+          const position = positions.get(index);
           if (position[0] != element[0]) {
-            return false;
+            continue;
           }
-            return Math.abs(position[1]) - Math.abs(element[1]) < 5 && Math.abs(position[1]) - Math.abs(element[1]) > -5;
-          
+          var x1, x2;
+          if (position[1] <= element[1]) {
+            x1 = position[1];
+            x2 = element[1];
+          } else {
+            x1 = element[1];
+            x2 = position[1];
+          }
+          var distance = Math.sqrt(Math.pow(x2 - x1, 2));
+          if (distance < 18) {
+            return true;
+          }
         }
-    
+        return false;
+      }
     },
   },
 };

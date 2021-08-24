@@ -1,10 +1,12 @@
-from pythia import api
+from pythia import api,db
 from flask_restful import Resource, fields, marshal_with, abort
 from flask import request
 from pythia.models import *
 import sqlite3
+import subprocess
+import re
 
-DB_PATH = "./pythia/pythia.sqlite"
+DB_PATH = "pythia/pythia.sqlite"
 
 dns_resource_fields = {
     'ts': fields.Float(attribute='connection.ts'),
@@ -19,9 +21,9 @@ dns_resource_fields = {
 connection_resource_fields = {
     'ts': fields.Float,
     'uid': fields.String,
-    'origin_host': fields.String,
+    'source': fields.String(attribute='origin_host'),
     'origin_port': fields.String,
-    'resp_host': fields.String,
+    'target': fields.String(attribute='resp_host'),
     'resp_port': fields.String,
     'proto': fields.String,
     'service': fields.String,
@@ -40,46 +42,63 @@ notice_resource_fields = {
 }
 
 dns_top_k_resource_fields = {
-    'query_text': fields.String,
-    'counter': fields.Integer,
+    'name': fields.String(attribute='query'),
+    'value': fields.Integer(attribute='counter'),
+}
+
+kilo_bytes_sum_by_time_resource_fields = {
+    'ts': fields.String(attribute='name'),
+    'value': fields.Integer(attribute='counter'),
 }
 
 kilo_bytes_sum_resource_fields = {
     'name': fields.String,
-    'counter': fields.Integer,
+    'value': fields.Integer(attribute='counter'),
 }
 
 host_top_k_resource_fields = {
-    'host': fields.String,
-    'counter': fields.Integer,
+    'name': fields.String(attribute='host'),
+    'value': fields.Integer(attribute='counter'),
 }
 
 port_sum_resource_fields = {
-    'port': fields.Integer(attribute='p'),
-    'protocol': fields.String(attribute='prot'),
-    'counter': fields.Integer,
+    'name': fields.String(attribute='p'),
+    'value': fields.Integer(attribute='counter'),
 }
 
 protocol_sum_resource_fields = {
-    'protocol': fields.String(attribute='prot'),
-    'counter': fields.Integer,
+    'name': fields.String(attribute='prot'),
+    'value': fields.Integer(attribute='counter'),
 }
 
 service_sum_resource_fields = {
-    'service': fields.String,
-    'counter': fields.Integer,
+    'name': fields.String(attribute="service"),
+    'value': fields.Integer(attribute="counter"),
 }
 
 summary_resource_fields = {
     'ts': fields.Float,
-    'counter': fields.Integer,
+    'value': fields.Integer(attribute='counter'),
+}
+
+status_resource_fields ={
+    'name': fields.String,
+    'type' : fields.String,
+    'host' : fields.String,
+    'status': fields.String,
+
 }
 
 
 class DNSEntries(Resource):
     @marshal_with(dns_resource_fields)
     def get(self):
-        return DnsModel.query.all()
+        start_time = request.args.get('start-time')
+        end_time = request.args.get('end-time')
+        if start_time and end_time:
+            return DnsModel.query.join(ConnectionModel).filter(ConnectionModel.ts >= start_time, ConnectionModel.ts <= end_time).all()
+        else:
+            return DnsModel.query.all()
 
 
 api.add_resource(DNSEntries, '/dns-entries')
@@ -102,7 +121,7 @@ class Connections(Resource):
     def get(self):
         start_time = request.args.get('start-time')
         end_time = request.args.get('end-time')
-        if (start_time and end_time):
+        if start_time and end_time:
             return ConnectionModel.query.filter(ConnectionModel.ts >= start_time, ConnectionModel.ts <= end_time).all()
         else:
             return ConnectionModel.query.all()
@@ -115,7 +134,6 @@ class Connection(Resource):
     @marshal_with(connection_resource_fields)
     def get(self, connection_uid):
         result = ConnectionModel.query.filter_by(uid=connection_uid).first()
-        print(result)
         if not result:
             abort(404, message='Could not find connection with that uid')
         return result
@@ -156,12 +174,12 @@ class DNSTopK(Resource):
         end_time = request.args.get('end-time')
 
         if (start_time and end_time):
-            query = "SELECT query_text, Sum(counter) AS counter FROM dns_top_k WHERE ts >=? AND ts <= ? " \
-                    "GROUP BY query_text ORDER BY counter DESC LIMIT 10"
+            query = "SELECT query, Sum(counter) AS counter FROM dns_top_k WHERE ts >=? AND ts <= ? " \
+                    "GROUP BY query ORDER BY counter DESC LIMIT 10"
             return get_data(query, DNSTopKEntry, (start_time, end_time))
         else:
-            query = "SELECT query_text, Sum(counter) AS counter FROM dns_top_k " \
-                    "GROUP BY query_text ORDER BY counter DESC LIMIT 10"
+            query = "SELECT query, Sum(counter) AS counter FROM dns_top_k " \
+                    "GROUP BY query ORDER BY counter DESC LIMIT 10"
             return get_data(query, DNSTopKEntry, [])
 
 
@@ -183,7 +201,7 @@ class OriginHostTopK(Resource):
             return get_data(query, OriginHostTopKEntry, [])
 
 
-api.add_resource(OriginHostTopK, '/origin-top-k')
+api.add_resource(OriginHostTopK, '/origin-host-top-k')
 
 
 class ResponderHostTopK(Resource):
@@ -292,6 +310,22 @@ class IpKilobyteSum(Resource):
 
 api.add_resource(IpKilobyteSum, '/ip-kilobyte-sum')
 
+class IpKilobyteSumByTime(Resource):
+    @marshal_with(kilo_bytes_sum_by_time_resource_fields)
+    def get(self):
+        start_time = request.args.get('start-time')
+        end_time = request.args.get('end-time')
+        if (start_time and end_time):
+            query = "SELECT ts,SUM(counter) as counter FROM ip_bytes_sum WHERE ts >=? AND " \
+                    "ts <= ? GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
+            return get_data(query, IPKilobyteSumEntry, (start_time, end_time))
+        else:
+            query = "SELECT ts,SUM(counter) FROM ip_bytes_sum GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
+            return get_data(query, IPKilobyteSumEntry, [])
+
+
+api.add_resource(IpKilobyteSumByTime, '/ip-kilobyte-sum/by-time')
+
 
 class ConnectionSummary(Resource):
     @marshal_with(summary_resource_fields)
@@ -309,6 +343,22 @@ class ConnectionSummary(Resource):
 
 api.add_resource(ConnectionSummary, '/connection-summary')
 
+class ZeekStatus(Resource):
+    def get(self):
+        try:
+            result = subprocess.run(['/usr/local/zeek/bin/zeekctl','status'],stdout=subprocess.PIPE)
+        except FileNotFoundError:
+            abort(500, message=StatusEntry.error_message)
+        output = result.stdout.decode('utf-8')
+        lines = re.split(r'\n+',output)
+        result = []
+        for line in lines[1:]:
+            line = re.split(r'\s+',line)
+            result.append(StatusEntry(line[0],line[1],line[2],line[3]))
+        return result
+
+api.add_resource(ZeekStatus, '/zeek-status')
+
 
 def get_data(query, cl, parameter):
     try:
@@ -319,9 +369,9 @@ def get_data(query, cl, parameter):
     rows = cur.execute(query, parameter)
     result = []
     for row in rows:
-        print(row)
         result.append(cl(*row))
     if not result:
         abort(404, message=cl.error_message)
 
     return result
+

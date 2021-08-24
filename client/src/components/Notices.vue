@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card  max-height="375px">
          <v-card-title>Notices</v-card-title>
   <v-expansion-panels>
     <v-expansion-panel
@@ -50,5 +50,8 @@ export default {
 </script>
 
 <style scoped>
+.v-card {
+  overflow-y: auto;
+}
 
 </style>
