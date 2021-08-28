@@ -6,20 +6,20 @@
 </v-row>
 <v-row>
   <v-col cols=5 >
-   <PieChart  v-bind:chartNumber=3 v-bind:data="this.$store.state.protocolSummary"/>
+   <PieChart  v-bind:chartNumber=3 v-bind:data="this.$store.getters.connectionsPortsOfInterest"/>
      </v-col>
 <v-col cols="5">
-      <BarChartHorizontal  v-bind:chartNumber=2 v-bind:data="this.$store.state.protocolSummary"/>
+      <BarChartHorizontal  dataName="dNSTopKQueries" v-bind:chartNumber=2 v-bind:data="this.$store.state.topKDNSQueries"/>
 </v-col>
 
 </v-row>
 <v-row>
   <v-col cols="4">
-      <BarChart v-bind:chartNumber=1 v-bind:data="this.$store.state.ipByteSummary"
+      <BarChart v-bind:chartNumber=1 v-bind:data="this.$store.getters.connectionsPortsOfInterest"
 />
   </v-col>
   <v-col>
-    <LineChart v-bind:chartNumber=4 v-bind:data="this.$store.state.ipByteSummaryByTime"/>
+    <LineChart v-bind:chartNumber=4 v-bind:data="this.$store.getters.connectionsPerMinute"/>
   </v-col>
 </v-row>
 <v-row>

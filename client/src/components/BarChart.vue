@@ -101,7 +101,7 @@ bars.enter()
 		.attr("y", function(d){ return scY(d.value); })
 		.attr("height", function(d){ return -scY(d.value) })
     .attr('width',barWidth-5)
-    .attr('fill',"black")
+    .style("fill", 'var(--v-quaternary-base)')
     .attr('opacity', 0.8)
 
 bars.transition()

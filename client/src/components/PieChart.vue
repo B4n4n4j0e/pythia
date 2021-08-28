@@ -1,6 +1,6 @@
 <template>
-  <v-card>
-    <v-btn @click="updateChart">clickMe</v-btn>
+  <v-card >
+    <v-btn color='primary' class="var(--v-accent-lighten2)" @click="updateChart">clickMe</v-btn>
     <svg :id="id" viewBox="0 0 800 450"></svg>
   </v-card>
 </template>
@@ -68,14 +68,13 @@ export default {
           })
         )
         .range([
-          "#98abc5",
-          "#8a89a6",
-          "#7b6888",
-          "#6b486b",
-          "#a05d56",
-          "#d0743c",
-          "#ff8c00",
+          'var(--v-primary-base)',
+          'var(--v-secondary-base)',
+          'var(--v-tertiary-base)',
+          'var(--v-quaternary-base)',
+          'var(--v-quinary-darken-1)',
         ]);
+
       var globalPacketCount = this.data.reduce(function (a, b) {
         return a + b.value;
       }, 0);
@@ -116,13 +115,13 @@ export default {
         .selectAll("path.slice" + this.chartNumber)
         .data(pie(data, key));
 
+
       slice
         .enter()
         .insert("path")
         .style("fill", function (d) {
           return color(d.data.label);
         })
-        .attr("class", "slice" + this.chartNumber)
         .attr("d", function (d) {
           this._current = d;
           return arc(d);
@@ -182,7 +181,9 @@ export default {
         .style("text-anchor", function (d) {
           this._current = d;
           return midAngle(d) < Math.PI ? "start" : "end";
-        });
+        })
+        .style("fill", 'var(--v-text-base)');
+
 
       text
         .transition()
@@ -260,7 +261,7 @@ export default {
         })
         .attr("stroke-width", "2px")
         .attr("fill", "none")
-        .attr("stroke", "black");
+        .style("stroke", 'var(--v-tertiary-base)');
 
       polyline
         .transition()
@@ -292,7 +293,7 @@ export default {
         })
         .attr("stroke-width", "2px")
         .attr("fill", "none")
-        .attr("stroke", "black");
+        .style("stroke", 'var(--v-tertiary-base)');
 
       polyline.exit().remove();
 

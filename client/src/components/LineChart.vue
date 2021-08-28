@@ -108,7 +108,7 @@ export default {
         .datum(this.data)
         .attr("class", "line") // I add the class line to be able to modify this line later on.
         .attr("fill", "none")
-        .attr("stroke", "steelblue")
+        .style("stroke", 'var(--v-tertiary-base)')
         .attr("stroke-width", 1.5)
         .attr(
           "d",

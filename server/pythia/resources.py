@@ -344,7 +344,9 @@ class ConnectionSummary(Resource):
 api.add_resource(ConnectionSummary, '/connection-summary')
 
 class ZeekStatus(Resource):
+    @marshal_with(status_resource_fields)
     def get(self):
+        '''
         try:
             result = subprocess.run(['/usr/local/zeek/bin/zeekctl','status'],stdout=subprocess.PIPE)
         except FileNotFoundError:
@@ -352,10 +354,15 @@ class ZeekStatus(Resource):
         output = result.stdout.decode('utf-8')
         lines = re.split(r'\n+',output)
         result = []
-        for line in lines[1:]:
+        for line in lines[1:len(lines-1)]:
             line = re.split(r'\s+',line)
             result.append(StatusEntry(line[0],line[1],line[2],line[3]))
         return result
+'''
+        entry1 = StatusEntry('manager','manager','localhost','running')
+        entry2 = StatusEntry('proxy','proxy','localhost','running')
+        entry3 = StatusEntry('worker-1','worker','localhost','running')
+        return [entry1,entry2,entry3]
 
 api.add_resource(ZeekStatus, '/zeek-status')
 

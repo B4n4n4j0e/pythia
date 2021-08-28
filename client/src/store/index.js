@@ -26,7 +26,9 @@ export default new Vuex.Store({
         topKOriginHost: [],
         topKDNSQueries:[],
         dNSConnections: [],
-        portsOfInterest: [],
+        portsOfInterest:[],
+        connectionPortsOfInterest: ["10/tcp", "21/tcp", "22/tcp", "23/tcp", "25/tcp", "80/tcp", "110/tcp", "139/tcp", "443/tcp", "445/tcp", "3389/tcp", "10/udp", "53/udp", 
+        "67/udp", "123/udp", "135/udp", "137/udp", "138/udp", "161/udp", "445/udp", "631/udp", "1434/udp"],
         startTime: null,
         endTime: null,
         globalPacketCount: 0,
@@ -36,11 +38,31 @@ export default new Vuex.Store({
         serviceSummary: [],
         ipByteSummary: [],
         ipByteSummaryByTime: [],
+        dNSTopKfilterTracker: 0,
+        filter: [new Map(),new Map(),new Map(),new Map()]
 
     },
 
 
     mutations: {
+
+        setFilter(state, data) {
+            if (data.summary){
+                switch(data.dataName){
+                    case "dNSTopKQueries":
+                            state.filter[1].set(data.filter,1)
+                            state.dNSTopKfilterTracker +=1
+                            break
+                    default:
+                        break
+                }
+            }
+                            
+        },
+
+        removeFilter() {
+        },
+
         setConnections(state, newConnections) {
             state.connections = newConnections;
         },
@@ -115,13 +137,12 @@ export default new Vuex.Store({
 
     actions: {
         getConnections(context) {
-            console.log(context.state.startTime)
-            console.log(context.state.endTime)
-
             const nodes = new Map()
 
             ConnectionsService.get(context.state.startTime, context.state.endTime).then((response) => {
                 response.data.forEach(d => {
+                    d.ts = new Date(d.ts * 1000)
+
                     if (nodes.has(d.source)) {
                         nodes.set(d.source, nodes.get(d.source)+1)
                     }
@@ -233,8 +254,6 @@ export default new Vuex.Store({
             context.dispatch('getIPByteSummary')
             context.dispatch('getIPByteSummaryByTime')
 
-
-
         }
     },
     getters: {
@@ -292,8 +311,30 @@ export default new Vuex.Store({
             return null
         },
 
+        connectionsPerMinute: state => {
+            var data = new Map()
+            var coeff = 1000*60*60
+            state.connections.forEach((element) => {
+                var date =   {
+                    ts: new Date(Math.floor(element.ts.getTime() / coeff) * coeff),
+                    value: 0
+                }
+                if (data.has(date.ts.getTime())) {
+                    date.value = data.get(date.ts.getTime()).value+1
+                    data.set(date.ts.getTime(),date)
+                }
+                else {
+                    date.value = 1
+                    data.set(date.ts.getTime(),date)
+                }
+            })
+            return Array.from(data, ([, {ts,value}]) => ({ ts, value }));
 
-        pieData: state => {
+        },
+
+
+
+        connectionsServiceData: state => {
             var data = new Map()
             state.connections.forEach((element) => {
                 if (data.has(element["service"])) {
@@ -301,20 +342,91 @@ export default new Vuex.Store({
                 } else {
                     data.set(element["service"], 1);
                 }
-            }); return data;
+            }); 
+            return Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
         },
 
-        barChartData: state => {
-            const tmpData = new Map()
+        connectionsProtocolData: state => {
+            const data = new Map()
             state.connections.forEach((element) => {
-                if (tmpData.has(element["proto"])) {
-                    tmpData.set(element["proto"], tmpData.get(element["proto"]) + 1);
+                if (data.has(element["proto"])) {
+                    data.set(element["proto"], data.get(element["proto"]) + 1);
                 } else {
-                    tmpData.set(element["proto"], 1);
+                    data.set(element["proto"], 1);
                 }
             });
-            return new Map([...tmpData].sort((a, b) => b[1] - a[1]));
+            return  Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
         },
+        
+        connectionsriginHostTopKData: state => {
+            const data = new Map()
+            state.connections.forEach((element) => {
+                if (data.has(element["source"])) {
+                    data.set(element["source"], data.get(element["source"]) + 1);
+                } else {
+                    data.set(element["source"], 1);
+                }
+            });
+            return  Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0,10);
+        },
+
+        connectionsRespHostTopKData: state => {
+            const data = new Map()
+            state.connections.forEach((element) => {
+                if (data.has(element["target"])) {
+                    data.set(element["target"], data.get(element["target"]) + 1);
+                } else {
+                    data.set(element["target"], 1);
+                }
+            });
+            return  Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0,10);
+        },
+
+
+        connectionsRespPortTopKData: state => {
+            const data = new Map()
+            state.connections.forEach((element) => {
+               var port = element.resp_port.toString() + '/' + element.proto
+                if (data.has(port)) {
+                    data.set(port, data.get(port) + 1);
+                } else {
+                    data.set(port, 1);
+                }
+            });
+
+            return  Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0,10);
+        },
+
+        connectionsPortsOfInterest: state => {
+            const data = new Map()
+            state.connections.forEach((element) => {
+               var port = element.resp_port.toString() + '/' + element.proto
+               if (state.connectionPortsOfInterest.includes(port)){
+                if (data.has(port)) {
+                    data.set(port, data.get(port) + 1);
+                } else {
+                    data.set(port, 1);
+                }
+            }
+            });
+
+            return  Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0,10);
+        },
+
+        dNSTopKQueries: state => {
+            const data = new Map()
+            state.dNSConnections.forEach((element) => {
+                if (data.has(element.query_text)) {
+                    data.set(element.query_text, data.get(element.query_text) + 1);
+                } else {
+                    data.set(element.query_text, 1);
+                }
+            });
+            return  Array.from(data, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0,10);
+        },
+
+
+
 
         nodeData: state => {
 

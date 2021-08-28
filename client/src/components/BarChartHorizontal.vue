@@ -7,7 +7,6 @@
 
 <script>
 import * as d3 from "d3";
-
 export default {
   name: "HorizontalBarChart",
   props: {
@@ -26,18 +25,34 @@ export default {
       required: true,
       type: Number,
     },
+    summary: {
+      default: true,
+      type: Boolean
+    },
+    dataName: {
+      type: String,
+      required: true
+    }
   },
-  data: () => ({}),
+  data: () => ({
+    
+  }),
 
   computed: {
     id() {
       return "chart" + this.chartNumber.toString();
     },
+    filter() {
+      return this.$store.state.dNSTopKfilterTracker
+    }
   },
   watch: {
     data: function () {
       this.updateChart();
     },
+    filter: function() {
+      this.changeFilter();
+    }
   },
 
   mounted() {
@@ -46,6 +61,8 @@ export default {
 
   methods: {
     test() {
+            console.log(this.filter)
+
       this.updateChart();
     },
     createBarChart() {
@@ -93,6 +110,7 @@ export default {
             return d.name;
           })
         );
+      const vm = this
 
       var bar = svg
         .select("g.bars" + this.chartNumber)
@@ -109,7 +127,14 @@ export default {
         .attr("y", function (d) {
           return scY(d.name);
         })
-        .attr("height", scY.bandwidth());
+        .attr("height", scY.bandwidth())
+        .style("fill", function(d) {
+          if (vm.$store.state.filter[1].has(d.name)){
+                  return "var(--v-tertiary-base)"
+          }
+           return "var(--v-primary-base)"
+        })
+        .on('click',handleClick);
 
       bar
         .transition()
@@ -135,19 +160,18 @@ export default {
         .attr("y", (d) => scY(d.name) + scY.bandwidth() / 2)
         .attr("dy", "0.35em")
         .attr("dx", +4)
+        .style("fill", 'var(--v-text-base)')
         .text((d) => d.name)
         .call((text) =>
           text
             .filter((d) => scX(d.value) - scX(0) < 250) // short bars
             .attr("x", (d) => scX(d.value))
             .attr("dx", +4)
-            .attr("fill", "black")
             .attr("text-anchor", "start")
         );
 
       text.exit().remove();
 
-      
       // add the x Axis
       d3.select('g.xAxis'+this.chartNumber)
         .attr("transform", "translate(0," + this.height + ")")
@@ -162,7 +186,37 @@ export default {
           })
           .tickSize(0)
       );
+      function handleClick(d,filter) {
+        var selecterdBar = d3.select(this)  
+        var data = {
+          summary: vm.summary,
+          dataName: vm.dataName,
+          filter: filter.name
+        }
+
+         if (selecterdBar.style('fill') == 'var(--v-tertiary-base)') {
+           vm.$store.commit('removeFilter',data)
+         }
+         else {
+            vm.$store.commit('setFilter',data)
+
+         }
+
+      }
     },
+    changeFilter() {
+      console.log('Filter is changing')
+      const vm = this
+    var bars = d3.select("#" + this.id).select("g.bars" + this.chartNumber).selectAll("rect")
+                .style("fill", function(d) {
+          if (vm.$store.state.filter[1].has(d.name)){
+            console.log(d.name)
+                  return "var(--v-tertiary-base)"
+          }
+           return "var(--v-primary-base)"
+        })
+        console.log(bars)
+    }
   },
 };
 </script>
