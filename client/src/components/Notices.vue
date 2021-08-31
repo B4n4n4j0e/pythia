@@ -1,5 +1,6 @@
 <template>
   <v-card  max-height="375px">
+    <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
          <v-card-title>Notices</v-card-title>
   <v-expansion-panels>
     <v-expansion-panel
@@ -26,8 +27,10 @@
 
 <script>
 
-export default {
+import ChartControls from "../components/ChartControls.vue";
 
+export default {
+  components: { ChartControls },
   data: () => ({
 
   }),

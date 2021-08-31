@@ -1,5 +1,7 @@
 <template>
   <v-card >
+        <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
+
      <v-btn @click="createNetworkChart">clickMe</v-btn>
     <svg :id=id viewBox="0 0 960 450"></svg>
 
@@ -8,8 +10,9 @@
 
 <script>
 import * as d3 from "d3";
-
+import ChartControls from '../components/ChartControls.vue';
 export default {
+  components: { ChartControls },
     name: 'NetworkGraph',
 
       props: {

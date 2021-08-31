@@ -1,0 +1,53 @@
+<template>
+    <div class="d-flex flex-row">    
+        <v-card-text class="ml-4"> {{view.dataLabel || data.startTime}} </v-card-text>
+          <v-btn justify-right class="ml-4" @click="configureView" text color="primary">
+              <v-icon>mdi-cog</v-icon>
+          </v-btn>
+          <v-btn  text @click="removeView" color="error">X</v-btn>
+              </div>
+</template>
+
+<script>
+
+export default {
+  props: {
+    chartNumber: {
+      required: true,
+      type: Number,
+    },
+  },
+
+  data: () => ({
+
+  }),
+    computed: {
+      view() {
+        return this.$store.getters.viewById(this.chartNumber)
+      },
+      data() {
+        return this.$store.getters.dataById(this.chartNumber)
+      }
+
+  },
+
+
+  methods: {
+    removeView() {
+      this.$store.commit('removeView',this.chartNumber)
+    },
+    
+    configureView() {
+
+      this.$store.commit('configureView',this.chartNumber)
+    }
+    
+  
+  },
+
+}
+</script>
+
+<style scoped>
+
+</style>

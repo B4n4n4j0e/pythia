@@ -109,7 +109,9 @@
       </v-menu>
 </v-row>
 <v-row>
-<v-btn :color=buttonColor @click="submitTime">{{this.buttonText}}</v-btn>
+<v-btn :color=buttonColorLeft @click="submitTimeLeft">{{this.buttonTextLeft}}</v-btn>
+<v-btn class="ml-5" :color=buttonColorRight @click="submitTimeRight">{{this.buttonTextRight}}</v-btn>
+
 </v-row>
 
  </v-container>
@@ -121,10 +123,16 @@
 
   export default {  
       props: {
-             buttonColor: {
+             buttonColorLeft: {
                  default: 'primary'
              },
-             buttonText: {
+             buttonTextLeft: {
+                 type: String
+             },
+              buttonColorRight: {
+                 default: 'primary'
+             },
+             buttonTextRight: {
                  type: String
              }
 
@@ -152,25 +160,54 @@
         endDate: null 
     }),
     computed:{
+      selectedDataset () {
+        return this.$store.state.selectedDataset
+      }
 
     },
+    watch: {
+      selectedDataset: function () {
+          this.startTime = this.$store.getters.startTime
+          this.endTime = this.$store.getters.endTime
+          this.startDate = this.$store.getters.startDate
+          this.endDate = this.$store.getters.endDate
+
+      }
+    },
+
+
 
     methods: {
 
       /*
       sets start and end time in store and requests new data from store
       */
-      submitTime() {
+      submitTimeLeft() {
+        var startTimeStamp = this.getStartTimeStamp()
+        var endTimeStamp = this.getEndTimeStamp()
+
+        this.$emit('sendTimestampsLeft',startTimeStamp ,endTimeStamp);
+
+      },
+        submitTimeRight() {
+        var startTimeStamp = this.getStartTimeStamp()
+        var endTimeStamp = this.getEndTimeStamp()
+        this.$emit('sendTimestampsRight',startTimeStamp, endTimeStamp);
+
+      },
+
+      getStartTimeStamp() {
         var time = this.startTime.split(":") 
         var date = this.startDate.split("-").map(x => parseInt(x))
         var startTimestamp = new Date(date[0],date[1]-1,date[2],time[0],time[1],0).getTime()
-        
-        time = this.endTime.split(":") 
-        date = this.endDate.split("-").map(x => parseInt(x))
+        return startTimestamp
+      },
+            
+      getEndTimeStamp() {
+        var time = this.endTime.split(":") 
+        var date = this.endDate.split("-").map(x => parseInt(x))
         var endTimestamp = new Date(date[0],date[1]-1,date[2],time[0],time[1],0).getTime()
-        this.$emit('sendTimestamps', startTimestamp,endTimestamp);
-
-
+        return endTimestamp
 
       }
   

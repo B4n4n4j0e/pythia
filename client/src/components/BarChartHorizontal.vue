@@ -1,13 +1,15 @@
 <template>
   <v-card>
-    <v-btn @click="test">clickMe</v-btn>
+    <ChartControls v-bind:data="data" v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 660 500"></svg>
   </v-card>
 </template>
 
 <script>
 import * as d3 from "d3";
+import ChartControls from '../components/ChartControls.vue';
 export default {
+  components: { ChartControls },
   name: "HorizontalBarChart",
   props: {
     data: {
@@ -25,14 +27,6 @@ export default {
       required: true,
       type: Number,
     },
-    summary: {
-      default: true,
-      type: Boolean
-    },
-    dataName: {
-      type: String,
-      required: true
-    }
   },
   data: () => ({
     
@@ -42,31 +36,34 @@ export default {
     id() {
       return "chart" + this.chartNumber.toString();
     },
-    filter() {
-      return this.$store.state.dNSTopKfilterTracker
+    filterTracker() {
+      return this.data.tracker
+    },
+    payload() {
+      return this.data.payload
     }
+
   },
   watch: {
-    data: function () {
+    payload: function () {
       this.updateChart();
     },
-    filter: function() {
+
+    filterTracker: function() {
       this.changeFilter();
     }
   },
 
   mounted() {
     this.createBarChart();
+      this.updateChart();
+
   },
 
   methods: {
-    test() {
-            console.log(this.filter)
 
-      this.updateChart();
-    },
     createBarChart() {
-      var margin = { top: 20, right: 20, bottom: 30, left: 10 },
+      var margin = { top: 0, right: 20, bottom: 10, left: 10 },
         svg = d3.select("#" + this.id).append("g");
       svg.append("g").attr("class", "bars" + this.chartNumber);
       svg.append("g").attr("class", "xAxis" + this.chartNumber);
@@ -88,6 +85,8 @@ export default {
     },
 
     updateChart() {
+            console.log(this.$store.state.startTime)
+
      var svg = d3.select("#" + this.id)
 
       var scX = d3
@@ -96,7 +95,7 @@ export default {
         .domain([
           0,
           1.05 *
-            d3.max(this.data, function (d) {
+            d3.max(this.payload, function (d) {
               return d.value;
             }),
         ]);
@@ -106,7 +105,7 @@ export default {
         .range([0, this.height])
         .padding(0.1)
         .domain(
-          this.data.map(function (d) {
+          this.payload.map(function (d) {
             return d.name;
           })
         );
@@ -115,7 +114,7 @@ export default {
       var bar = svg
         .select("g.bars" + this.chartNumber)
         .selectAll("rect")
-        .data(this.data);
+        .data(this.payload);
       bar
         .enter()
         .append("rect")
@@ -129,7 +128,7 @@ export default {
         })
         .attr("height", scY.bandwidth())
         .style("fill", function(d) {
-          if (vm.$store.state.filter[1].has(d.name)){
+           if (vm.data.filter.has(d.name)){
                   return "var(--v-tertiary-base)"
           }
            return "var(--v-primary-base)"
@@ -152,7 +151,7 @@ export default {
       var text = svg
         .select("g.text" + this.chartNumber)
         .selectAll("text")
-        .data(this.data);
+        .data(this.payload);
       text.enter();
       text
         .join("text")
@@ -187,35 +186,33 @@ export default {
           .tickSize(0)
       );
       function handleClick(d,filter) {
-        var selecterdBar = d3.select(this)  
         var data = {
-          summary: vm.summary,
-          dataName: vm.dataName,
+          name: vm.data.name,
+          summary: vm.data.summary,
+          type: vm.data.type,
           filter: filter.name
         }
-
-         if (selecterdBar.style('fill') == 'var(--v-tertiary-base)') {
+         if (vm.data.filter.has(data.filter)) {
            vm.$store.commit('removeFilter',data)
          }
          else {
+
             vm.$store.commit('setFilter',data)
 
          }
 
       }
     },
+
     changeFilter() {
-      console.log('Filter is changing')
       const vm = this
-    var bars = d3.select("#" + this.id).select("g.bars" + this.chartNumber).selectAll("rect")
+      d3.select("#" + this.id).select("g.bars" + this.chartNumber).selectAll("rect")
                 .style("fill", function(d) {
-          if (vm.$store.state.filter[1].has(d.name)){
-            console.log(d.name)
+          if (vm.data.filter.has(d.name)){
                   return "var(--v-tertiary-base)"
           }
            return "var(--v-primary-base)"
         })
-        console.log(bars)
     }
   },
 };

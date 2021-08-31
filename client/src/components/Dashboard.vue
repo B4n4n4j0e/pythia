@@ -1,100 +1,113 @@
 <template>
-      <v-container fluid>
-<v-row>
-<TimePicker buttonText="Submit" buttonColor="primary" @sendTimestamps="submitTime" />
+  <v-container fluid>
+    <v-row no-gutters>
+      <div class="d-flex ">
+        <TimePicker
+          buttonTextLeft="Submit summary"
+          buttonColorLeft="primary"
+          buttonTextRight="Submit detail"
+          buttonColorRight="primary"
+          @sendTimestampsLeft="submitSummaryTime"
+          @sendTimestampsRight="submitDetailTime"
+        />
 
-</v-row>
-<v-row>
-  <v-col cols=5 >
-   <PieChart  v-bind:chartNumber=3 v-bind:data="this.$store.getters.connectionsPortsOfInterest"/>
-     </v-col>
-<v-col cols="5">
-      <BarChartHorizontal  dataName="dNSTopKQueries" v-bind:chartNumber=2 v-bind:data="this.$store.state.topKDNSQueries"/>
-</v-col>
+        <v-select
+        v-model="selected"
+          :items="datasets"
+          item-text="name"
+          label="Select Dataset"
+          outlined
+        ></v-select>
 
-</v-row>
-<v-row>
-  <v-col cols="4">
-      <BarChart v-bind:chartNumber=1 v-bind:data="this.$store.getters.connectionsPortsOfInterest"
-/>
-  </v-col>
-  <v-col>
-    <LineChart v-bind:chartNumber=4 v-bind:data="this.$store.getters.connectionsPerMinute"/>
-  </v-col>
-</v-row>
-<v-row>
-    <v-col>
-    <LineChart v-bind:chartNumber=5 v-bind:data="this.$store.state.connectionSummary"/>
-  </v-col>
-</v-row>
-<v-row>
-<v-col cols="12">
-      <ConnectionChart/>
-</v-col>
-<v-col cols="12">
-      <DNSChart/>
-</v-col>
-     <v-col>
- <Notices/>
-   </v-col>
-</v-row>
+      </div>
+    </v-row>
 
- </v-container>
+<v-row>
+    <v-col v-for="view in views" v-bind:key="view.chartNumber" :cols="view.cols">
+      <component v-bind:chartNumber="view.chartNumber" v-bind:data="$store.getters.dataById(view.chartNumber)" v-bind:is="view.view" > </component>
+    </v-col>
+
+    </v-row>
+      <div class=" mt-3 d-flex justify-center flex-row">
+
+      </div>
+<ViewDialog/>
+  </v-container>
 
 </template>
 
 <script>
-import PieChart from './PieChart.vue';
-import BarChart from './BarChart.vue'
-import LineChart from './LineChart.vue'
-import Notices from './Notices.vue';
-import ConnectionChart from './ConnectionChart.vue';
-import DNSChart from './DNSChart.vue';
-import BarChartHorizontal from './BarChartHorizontal.vue';
-import TimePicker from './TimePicker.vue'
+import PieChart from "./PieChart.vue";
+import BarChart from "./BarChart.vue";
+import LineChart from "./LineChart.vue";
+import Notices from "./Notices.vue";
+import ConnectionChart from "./ConnectionChart.vue";
+import DNSChart from "./DNSChart.vue";
+import BarChartHorizontal from "./BarChartHorizontal.vue";
+import TimePicker from "./TimePicker.vue";
+import ViewDialog from "./ViewDialog.vue";
 
 
-  export default {
-    components:{
-      BarChart,
-      PieChart,
-      Notices,
-      LineChart,
-      ConnectionChart,
-      DNSChart,
-      BarChartHorizontal,
-      TimePicker
+export default {
+  components: {
+    BarChart,
+    PieChart,
+    Notices,
+    LineChart,
+    ConnectionChart,
+    DNSChart,
+    BarChartHorizontal,
+    TimePicker,
+    ViewDialog
+  },
+
+  name: "Dashboard",
+  mounted() {},
+  data: () => ({
+    
+  }),
+
+  computed: {
+    datasets() {
+            return this.$store.state.datasets
     },
+    selected: {
+      get: function() {
+                  return this.$store.state.selectedDataset
+        },
 
-    name: 'Dashboard',
-    mounted() {
-
+      set: function(newValue) {
+                  this.$store.commit('setSelectedDataset',newValue)
+        }
     },
-    data: () => ({
+    views() {
+      return this.$store.state.views
+    }
 
-    }),
-    computed:{
+  },
 
-    },
-
-    methods: {
-
-      /*
+  methods: {
+    /*
       sets start and end time in store and requests new data from store
       */
-      submitTime(startTimestamp, endTimestamp ) {
-        this.$store.commit('setStartTime',startTimestamp)
-        this.$store.commit('setEndTime',endTimestamp)
-        this.$store.dispatch('getDashboardDataByTime')
-      }
-  
-  }}
+    submitDetailTime(startTimestamp, endTimestamp) {
+
+      this.$store.commit("setStartTime", startTimestamp);
+      this.$store.commit("setEndTime", endTimestamp);
+      this.$store.dispatch("getDashboardDataByTime");
+    },
+    submitSummaryTime(startTimestamp, endTimestamp) {
+      this.$store.commit("setStartTime", startTimestamp);
+      this.$store.commit("setEndTime", endTimestamp);
+      this.$store.dispatch("getSummaryDataByTime",this.$store.state.selectedDataset);
+    },
+  },
+};
 </script>
 
 <style scoped>
-.dateField{
-    max-width:125px;
-    overflow: hidden
+.dateField {
+  max-width: 125px;
+  overflow: hidden;
 }
-
 </style>

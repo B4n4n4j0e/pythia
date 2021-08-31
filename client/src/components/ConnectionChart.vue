@@ -1,5 +1,6 @@
 <template>
   <v-card >
+        <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <v-card-title>
       <v-text-field
         v-model="search"
@@ -18,10 +19,10 @@
 </template>
 
 <script>
+import ChartControls from "../components/ChartControls.vue";
 
 export default {
-
-
+  components: { ChartControls },
   data: () => ({
     search: '',
         headers: [
