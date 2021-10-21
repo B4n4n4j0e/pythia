@@ -1,30 +1,16 @@
 <template>
   <v-container fluid>
     <v-row no-gutters>
-      <div class="d-flex ">
         <TimePicker
-          buttonTextLeft="Submit summary"
-          buttonColorLeft="primary"
-          buttonTextRight="Submit detail"
-          buttonColorRight="primary"
-          @sendTimestampsLeft="submitSummaryTime"
-          @sendTimestampsRight="submitDetailTime"
+          buttonText="Submit summary"
+          buttonColor="primary"
+          @sendTimestamps="submitSummaryTime"
         />
-
-        <v-select
-        v-model="selected"
-          :items="datasets"
-          item-text="name"
-          label="Select Dataset"
-          outlined
-        ></v-select>
-
-      </div>
     </v-row>
 
 <v-row>
     <v-col v-for="view in views" v-bind:key="view.chartNumber" :cols="view.cols">
-      <component v-bind:chartNumber="view.chartNumber" v-bind:data="$store.getters.dataById(view.chartNumber)" v-bind:is="view.view" > </component>
+      <component v-bind:isSummary="view.isSummary" v-bind:chartNumber="view.chartNumber" v-bind:data="view.isSummary ? $store.getters['summaryData/dataByType'](view.type):  $store.getters['detailData/dataByType'](view.type)" v-bind:is="view.view" > </component>
     </v-col>
 
     </v-row>
@@ -41,21 +27,21 @@ import PieChart from "./PieChart.vue";
 import BarChart from "./BarChart.vue";
 import LineChart from "./LineChart.vue";
 import Notices from "./Notices.vue";
-import ConnectionChart from "./ConnectionChart.vue";
-import DNSChart from "./DNSChart.vue";
+import ConnectionTable from "./ConnectionTable.vue";
+import DNSTable from "./DNSTable.vue";
 import BarChartHorizontal from "./BarChartHorizontal.vue";
 import TimePicker from "./TimePicker.vue";
 import ViewDialog from "./ViewDialog.vue";
 
-
+ 
 export default {
   components: {
     BarChart,
     PieChart,
     Notices,
     LineChart,
-    ConnectionChart,
-    DNSChart,
+    ConnectionTable,
+    DNSTable,
     BarChartHorizontal,
     TimePicker,
     ViewDialog
@@ -68,19 +54,7 @@ export default {
   }),
 
   computed: {
-    datasets() {
-            return this.$store.state.datasets
-    },
-    selected: {
-      get: function() {
-                  return this.$store.state.selectedDataset
-        },
-
-      set: function(newValue) {
-                  this.$store.commit('setSelectedDataset',newValue)
-        }
-    },
-    views() {
+  views() {
       return this.$store.state.views
     }
 
@@ -91,7 +65,6 @@ export default {
       sets start and end time in store and requests new data from store
       */
     submitDetailTime(startTimestamp, endTimestamp) {
-
       this.$store.commit("setStartTime", startTimestamp);
       this.$store.commit("setEndTime", endTimestamp);
       this.$store.dispatch("getDashboardDataByTime");
@@ -99,7 +72,7 @@ export default {
     submitSummaryTime(startTimestamp, endTimestamp) {
       this.$store.commit("setStartTime", startTimestamp);
       this.$store.commit("setEndTime", endTimestamp);
-      this.$store.dispatch("getSummaryDataByTime",this.$store.state.selectedDataset);
+      this.$store.dispatch("summaryData/getDataByTime");
     },
   },
 };

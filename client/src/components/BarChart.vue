@@ -28,6 +28,11 @@ export default {
       required: true,
       type: Number,
     },
+        isSummary: {
+      required: true,
+      type: Boolean
+    }
+
   },
   data: () => ({}),
   computed: {
@@ -43,8 +48,12 @@ export default {
   },
   watch: {
     payload: function () {
+      if (this.$store.getters.viewById(this.chartNumber).isFrozen){
+        return
+      }
+      else {
       this.updateChart();
-    },
+      }    },
 
     filterTracker: function () {
       this.changeFilter();
@@ -162,20 +171,20 @@ export default {
       bars.exit().remove();
 
       function handleClick(d,filter) {
+        if (vm.isSummary) {
+        
         var data = {
-          name: vm.data.name,
-          summary: vm.data.summary,
           type: vm.data.type,
           filter: filter.name
         }
          if (vm.data.filter.has(data.filter)) {
-           vm.$store.commit('removeFilter',data)
+           vm.$store.commit('summaryData/removeFilter',data)
          }
          else {
-            vm.$store.commit('setFilter',data)
+            vm.$store.commit('summaryData/setFilter',data)
 
          }
-
+        }
       }
     },
 

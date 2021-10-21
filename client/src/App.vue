@@ -23,13 +23,17 @@ created() {
     startTime = startTime.getTime()
     this.$store.commit('setStartTime',startTime)
     this.$store.commit('setEndTime',endTime)
-    this.$store.dispatch('getDashboardDataByTime')
+    this.$store.dispatch('summaryData/getSummaryDataByTime')
+    
   })
 },
 
 
   components: {
     TopNavigation
+
+  },
+  methods: {
 
   },
 

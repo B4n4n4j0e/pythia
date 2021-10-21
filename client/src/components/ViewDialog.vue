@@ -22,18 +22,7 @@
                     required
                   ></v-select>
                 </v-col>
-                <v-col cols="12" sm="6">
-                  <v-select
-                    v-if="selectedDataType == 'Summary Data'"
-                    v-model="selectedDataset"
-                    :items="datasets"
-                    label="Dataset*"
-                    required
-                  ></v-select>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col cols="12" sm="6">
+              <v-col cols="12" sm="6">
                   <v-select
                     v-model="selectedData"
                     :disabled="selectedDataType == ''"
@@ -42,6 +31,8 @@
                     required
                   ></v-select>
                 </v-col>
+              </v-row>
+              <v-row>
                 <v-col cols="12" sm="6">
                   <v-select
                     v-model="selectedView"
@@ -49,10 +40,8 @@
                     :items="viewOptions"
                     label="Choose view*"
                     required
-                  ></v-select>
+                  ></v-select> 
                 </v-col>
-              </v-row>
-              <v-row>
                 <v-col cols="3">
                   <v-select
                     v-model="windowWidth"
@@ -60,11 +49,11 @@
                     label="Width*"
                     required
                   ></v-select>
-                </v-col>
+                </v-col> 
               </v-row>
             </v-container>
             <small>*indicates required field</small>
-          </v-card-text>
+          </v-card-text> 
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn color="primary" text @click="closeDialog"> Close </v-btn>
@@ -90,9 +79,6 @@
 <script>
 export default {
   computed: {
-    datasets() {
-      return this.$store.getters.datasetsArrayWithNames;
-    },
     dataOptions() {
       var result = [
         "Top k DNS queries",
@@ -111,7 +97,7 @@ export default {
       } else {
         result.unshift(
           "DNS table",
-          "Connections table",
+          "Connection table",
           "Connections per minute",
           "Notices"
         );
@@ -138,13 +124,14 @@ export default {
         return ["Bar chart horizontal", "Bar chart vertical", "Pie chart"];
       } else if (lineCharts.includes(this.selectedData)) {
         return ["Line chart"];
-      } else if (this.selectedData == "Connections table") {
-        return ["Connections table"];
+      } else if (this.selectedData == "Connection table") {
+        return ["Connection table"];
       } else if (this.selectedData == "DNS table") {
         return ["DNS table"];
-      } else {
+      } else if (this.selectedData == "Notices"){
         return ["Notices"];
       }
+      else return [];
     },
     dialog() {
       return this.$store.state.dialog;
@@ -158,10 +145,11 @@ export default {
       } else {
         this.$store.commit("setDialog", false);
 
-        if (this.$store.state.dialogName == "connections") {
-          this.selectedDataType = "Detail data";
-        } else {
+
+        if (this.$store.state.dialogIsSummary) {
           this.selectedDataType = "Summary Data";
+        } else {
+          this.selectedDataType = "Detail Data";
           this.selectedDataset = this.$store.state.dialogName;
         }
         this.dialogTitle = "Edit View";
@@ -177,7 +165,6 @@ export default {
     dialogBool: false,
     dialogTitle: "Add view",
     selectedDataType: "",
-    selectedDataset: "",
     selectedView: "",
     selectedData: "",
     windowWidth: 6,
@@ -186,7 +173,6 @@ export default {
 
     closeDialog() {
       this.selectedDataType = "";
-      this.selectedDataset = "";
       this.selectedView = "";
       this.dialogTitle = "Add view";
       this.selectedData = "";
@@ -195,36 +181,44 @@ export default {
 
 
     saveView() {
+      var summary
+      if (this.selectedDataType == 'Summary Data'){
+        summary = true
+      }
+      else {
+        summary = false 
+      }
       var viewData = {
-        name: this.selectedDataset,
         view: this.viewDataToChartName(this.selectedView),
         type: this.typeDataToStoreTypeData(this.selectedData),
         dataLabel: this.selectedData,
         viewLabel: this.selectedView,
         cols: this.windowWidth,
-        summary: true
+        isSummary: summary,
+        isFrozen: false
       };
-      if (viewData.name == "") {
-        viewData.name = "connections";
-        viewData.summary = false
-      }
-      this.$store.commit("addView", viewData);
+      this.$store.dispatch("addViewAndIncrementViewCounter", viewData);
       this.closeDialog();
     },
 
     updateView() {
+      var summary
+      if (this.selectedDataType == 'Summary Data'){
+        summary = true
+      }
+      else {
+        summary = false 
+      }
       var viewData = {
-       name: this.selectedDataset,
         view: this.viewDataToChartName(this.selectedView),
         type: this.typeDataToStoreTypeData(this.selectedData),
         dataLabel: this.selectedData,
         viewLabel: this.selectedView,
         cols: this.windowWidth,
+        isSummary: summary,
+
       };
-      if (viewData.name == "") {
-        viewData.name = "connections";
-      }
-      this.$store.commit("updateView", viewData);
+      this.$store.dispatch("updateViewAndCounter", viewData);
       this.closeDialog();
     },
 
@@ -238,10 +232,10 @@ export default {
           return "PieChart";
         case "Line chart":
           return "LineChart";
-        case "Connections table":
-          return "ConnectionChart";
+        case "Connection table":
+          return "ConnectionTable";
         case "DNS table":
-          return "ConnectionChart";
+          return "DNSTable";
         case "Notices":
           return "Notices";
         default:
@@ -262,23 +256,23 @@ export default {
         case "Ports of interest summary":
           return "portsOfInterest";
         case "Connections per hour":
-          return "connectionSummaries";
+          return "connectionSummaryPerHour";
         case "Protocols summary":
-          return "protocolSummaries";
+          return "protocolSummary";
         case "Services summary":
-          return "serviceSummaries";
+          return "serviceSummary";
         case "Kilobytes summary":
-          return "ipByteSummaries";
+          return "ipByteSummary";
         case "Kilobytes per hour":
-          return "ipByteSummariesByTime";
+          return "ipByteSummaryByTime";
         case "DNS table":
-          return "dnsTable";
-        case "Connections table":
+          return "dNSTable";
+        case "Connection table":
           return "connectionTable";
         case "Connections per minute":
-          return "connectionsPerMinute";
+          return "connectionSummaryPerMinute";
         case "Notices":
-          return "Notices";
+          return "notices";
         default:
           break;
       }

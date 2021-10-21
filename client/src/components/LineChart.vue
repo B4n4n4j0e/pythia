@@ -2,6 +2,9 @@
   <v-card>
     <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 960 450"></svg>
+    <div v-if= !isSummary>
+    <v-btn @click="test" >GET Data</v-btn>
+    </div>
   </v-card>
 </template>
 
@@ -29,6 +32,10 @@ export default {
       required: true,
       type: Number,
     },
+        isSummary: {
+      required: true,
+      type: Boolean
+    }
   },
   mounted() {
           this.createLineChart();
@@ -51,6 +58,15 @@ export default {
   },
 
   methods: {
+
+    test () {
+      console.log(this.$store.state.views)
+      this.$store.dispatch('detailData/getConnections').then(() => {this.createLineChart})
+     this.$store.dispatch('detailData/getDNSConnections').then(() => {this.createLineChart})
+      this.$store.dispatch('detailData/getNotices').then(() => {this.createLineChart})
+  
+
+    },
     createLineChart() {
       var vm = this;
       d3.select("#" + this.id)
@@ -191,15 +207,10 @@ export default {
           );
       }
       function updateData(startTime, endTime) {
-        if (vm.data.summary) {
-          var timestamps = {
-            name: vm.data.name,
-            startTime: startTime,
-            endTime: endTime,
-          };
-
-          vm.$store.commit("setDataSetTime", timestamps);
-          vm.$store.dispatch("updateSummaryData", vm.data.name);
+        if (vm.isSummary) {
+          vm.$store.commit("setStartTime", startTime);
+          vm.$store.commit("setEndTime", endTime);
+          vm.$store.dispatch("summaryData/updateData");
         } else {
           //direkt filtern
         }

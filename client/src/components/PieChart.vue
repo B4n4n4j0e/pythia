@@ -29,6 +29,11 @@ export default {
       required: true,
       type: Number,
     },
+    isSummary: {
+      required: true,
+      type: Boolean
+    }
+
   },
 
   data: () => ({}),
@@ -46,9 +51,13 @@ export default {
   },
   watch: {
     payload: function () {
+      if (this.$store.getters.viewById(this.chartNumber).isFrozen){
+        return
+      }
+      else {
       this.updateChart();
-    },
-
+      }    },
+ 
     filterTracker: function () {
       this.changeFilter();
     },
@@ -344,16 +353,16 @@ export default {
       polyline.exit().remove();
 
       function handleClick(d, filter) {
+        if (vm.isSummary) {
         var data = {
-          name: vm.data.name,
-          summary: vm.data.summary,
           type: vm.data.type,
           filter: filter.data.name,
         };
         if (vm.data.filter.has(data.filter)) {
-          vm.$store.commit("removeFilter", data);
+          vm.$store.commit("summaryData/removeFilter", data);
         } else {
-          vm.$store.commit("setFilter", data);
+          vm.$store.commit("summaryData/setFilter", data);
+        }
         }
       }
 
@@ -388,9 +397,7 @@ export default {
     },
       changeFilter() {
     const vm = this
-    if (this.data.summary) {
-
-
+    if (this.isSummary) {
     d3.select('#'+this.id).select('g').select('g.slices'+ this.chartNumber).selectAll('path')
         .attr("opacity", function(d) {
           if (vm.data.filter.has(d.data.name) || vm.data.filter.size == 0 ){
@@ -407,7 +414,7 @@ export default {
         })
   }
   else {
-    console.log('ConnectionStuff')
+    console.log(this.data)
   }
       }
 

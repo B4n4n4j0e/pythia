@@ -109,9 +109,7 @@
       </v-menu>
 </v-row>
 <v-row>
-<v-btn :color=buttonColorLeft @click="submitTimeLeft">{{this.buttonTextLeft}}</v-btn>
-<v-btn class="ml-5" :color=buttonColorRight @click="submitTimeRight">{{this.buttonTextRight}}</v-btn>
-
+<v-btn :color=buttonColor @click="submitTime">{{this.buttonText}}</v-btn>
 </v-row>
 
  </v-container>
@@ -123,19 +121,12 @@
 
   export default {  
       props: {
-             buttonColorLeft: {
+             buttonColor: {
                  default: 'primary'
              },
-             buttonTextLeft: {
+             buttonText: {
                  type: String
              },
-              buttonColorRight: {
-                 default: 'primary'
-             },
-             buttonTextRight: {
-                 type: String
-             }
-
   },
 
     name: 'TimePicker',
@@ -182,17 +173,10 @@
       /*
       sets start and end time in store and requests new data from store
       */
-      submitTimeLeft() {
+      submitTime() {
         var startTimeStamp = this.getStartTimeStamp()
         var endTimeStamp = this.getEndTimeStamp()
-
-        this.$emit('sendTimestampsLeft',startTimeStamp ,endTimeStamp);
-
-      },
-        submitTimeRight() {
-        var startTimeStamp = this.getStartTimeStamp()
-        var endTimeStamp = this.getEndTimeStamp()
-        this.$emit('sendTimestampsRight',startTimeStamp, endTimeStamp);
+        this.$emit('sendTimestamps',startTimeStamp ,endTimeStamp);
 
       },
 

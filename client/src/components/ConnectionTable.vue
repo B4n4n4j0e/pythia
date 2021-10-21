@@ -12,16 +12,35 @@
     </v-card-title>
     <v-data-table
       :headers="headers"
-      :items="connectionList"
+      :items="data.payload"
       :search="search"
-    ></v-data-table>
+    >
+    <template v-slot:item.ts = "{item}"> 
+      <span> {{item.ts.toLocaleString()}}</span>
+    </template>
+    </v-data-table>
   </v-card>
 </template>
 
 <script>
-import ChartControls from "../components/ChartControls.vue";
+import ChartControls from "./ChartControls.vue";
 
 export default {
+ props: {
+    data: {
+      required: true,
+    },
+
+    chartNumber: {
+      required: true,
+      type: Number,
+    },
+        isSummary: {
+      required: true,
+      type: Boolean
+    }
+  },
+
   components: { ChartControls },
   data: () => ({
     search: '',
@@ -41,10 +60,7 @@ export default {
 
         ],
   }),
-    computed: {
-            connectionList() {
-                return this.$store.state.connections;
-      }
+    computed: {   
 
   },
 

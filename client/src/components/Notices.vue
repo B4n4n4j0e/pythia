@@ -1,10 +1,10 @@
 <template>
   <v-card  max-height="375px">
-    <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
+    <ChartControls v-bind:data="data" v-bind:chartNumber="chartNumber" class="mb-0" />
          <v-card-title>Notices</v-card-title>
   <v-expansion-panels>
     <v-expansion-panel
-      v-for="(item,i) in notices"
+      v-for="(item,i) in data.payload"
       :key="i"
     >
       <v-expansion-panel-header>
@@ -31,20 +31,29 @@ import ChartControls from "../components/ChartControls.vue";
 
 export default {
   components: { ChartControls },
-  data: () => ({
+  name: "Notices",
+  props: {
+    data: {
+      required: true,
+    },
+    chartNumber: {
+      required: true,
+      type: Number,
+    },
+        isSummary: {
+      required: true,
+      type: Boolean
+    },
+  },
+data: () => ({}),
 
-  }),
   computed: {
-    notices() {
-      return this.$store.state.notices;
-    }
 
   },
 
   methods: {
-
     showDate(time) {
-      return (new Date(time*1000)).toLocaleString()
+      return time.toLocaleString()
     }
 
    

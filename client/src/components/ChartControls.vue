@@ -1,6 +1,9 @@
 <template>
     <div class="d-flex flex-row">    
         <v-card-text class="ml-4"> {{view.dataLabel || data.startTime}} </v-card-text>
+          <v-btn justify-right class="ml-4" @click="freezeView" text :color="view.isFrozen ? 'blue' : 'grey'">
+              <v-icon>mdi-snowflake</v-icon> 
+          </v-btn>
           <v-btn justify-right class="ml-4" @click="configureView" text color="primary">
               <v-icon>mdi-cog</v-icon>
           </v-btn>
@@ -28,20 +31,28 @@ export default {
       data() {
         return this.$store.getters.dataById(this.chartNumber)
       }
-
   },
 
 
   methods: {
     removeView() {
-      this.$store.commit('removeView',this.chartNumber)
+      this.$store.dispatch('removeViewAndDecrementViewCounter',this.chartNumber)
     },
     
     configureView() {
+      this.$store.commit('openViewOption',this.chartNumber)
+    },
 
-      this.$store.commit('configureView',this.chartNumber)
-    }
-    
+    freezeView() {
+      if (this.view.isFrozen){
+        this.$store.commit('unfreezeView',this.chartNumber)
+      }
+      else {
+            this.$store.commit('freezeView', this.chartNumber)
+  
+      }
+
+    } 
   
   },
 

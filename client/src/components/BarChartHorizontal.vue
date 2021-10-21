@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card>  
     <ChartControls v-bind:data="data" v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 660 500"></svg>
   </v-card>
@@ -27,6 +27,10 @@ export default {
       required: true,
       type: Number,
     },
+        isSummary: {
+      required: true,
+      type: Boolean
+    }
   },
   data: () => ({
     
@@ -46,7 +50,12 @@ export default {
   },
   watch: {
     payload: function () {
+      if (this.$store.getters.viewById(this.chartNumber).isFrozen){
+        return
+      }
+      else {
       this.updateChart();
+      }
     },
 
     filterTracker: function() {
@@ -85,8 +94,6 @@ export default {
     },
 
     updateChart() {
-            console.log(this.$store.state.startTime)
-
      var svg = d3.select("#" + this.id)
 
       var scX = d3
@@ -186,20 +193,18 @@ export default {
           .tickSize(0)
       );
       function handleClick(d,filter) {
+        if (vm.isSummary) {
         var data = {
-          name: vm.data.name,
-          summary: vm.data.summary,
           type: vm.data.type,
           filter: filter.name
         }
          if (vm.data.filter.has(data.filter)) {
-           vm.$store.commit('removeFilter',data)
+           vm.$store.commit('summaryData/removeFilter',data)
          }
          else {
-
-            vm.$store.commit('setFilter',data)
-
+            vm.$store.commit('summaryData/setFilter',data)
          }
+        }
 
       }
     },
