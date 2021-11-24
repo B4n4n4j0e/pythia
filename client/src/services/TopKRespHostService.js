@@ -7,5 +7,7 @@ export default {
         }
         return Api().get('/responder-host-top-k')
     },
-
+    post(data){
+        return Api().post('/responder-host-top-k', data)
+    }
 }

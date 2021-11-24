@@ -7,5 +7,8 @@ export default {
         }
         return Api().get('dns-entries')
     },
+    post(data){
+        return Api().post('dns-entries', data)
+    }
 
 }

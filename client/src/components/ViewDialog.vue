@@ -98,7 +98,6 @@ export default {
         result.unshift(
           "DNS table",
           "Connection table",
-          "Connections per minute",
           "Notices"
         );
         return result;
@@ -116,7 +115,6 @@ export default {
         "Kilobytes summary",
       ];
       var lineCharts = [
-        "Connections per minute",
         "Connections per hour",
         "Kilobytes per hour",
       ];
@@ -256,7 +254,7 @@ export default {
         case "Ports of interest summary":
           return "portsOfInterest";
         case "Connections per hour":
-          return "connectionSummaryPerHour";
+          return "connectionSummary";
         case "Protocols summary":
           return "protocolSummary";
         case "Services summary":
@@ -269,8 +267,6 @@ export default {
           return "dNSTable";
         case "Connection table":
           return "connectionTable";
-        case "Connections per minute":
-          return "connectionSummaryPerMinute";
         case "Notices":
           return "notices";
         default:

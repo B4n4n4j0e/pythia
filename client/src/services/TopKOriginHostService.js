@@ -7,5 +7,7 @@ export default {
         }
         return Api().get('/origin-host-top-k')
     },
-
+    post(data){
+        return Api().post('/origin-host-top-k', data)
+    }
 }

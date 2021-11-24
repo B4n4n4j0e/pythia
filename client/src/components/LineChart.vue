@@ -2,9 +2,7 @@
   <v-card>
     <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 960 450"></svg>
-    <div v-if= !isSummary>
-    <v-btn @click="test" >GET Data</v-btn>
-    </div>
+
   </v-card>
 </template>
 
@@ -60,10 +58,9 @@ export default {
   methods: {
 
     test () {
-      console.log(this.$store.state.views)
-      this.$store.dispatch('detailData/getConnections').then(() => {this.createLineChart})
-     this.$store.dispatch('detailData/getDNSConnections').then(() => {this.createLineChart})
-      this.$store.dispatch('detailData/getNotices').then(() => {this.createLineChart})
+      this.$store.dispatch('detailData/getConnections') //.then(() => {this.createLineChart})
+//     this.$store.dispatch('detailData/getDNSConnections').then(() => {this.createLineChart})
+  //    this.$store.dispatch('detailData/getNotices').then(() => {this.createLineChart})
   
 
     },
@@ -211,6 +208,8 @@ export default {
           vm.$store.commit("setStartTime", startTime);
           vm.$store.commit("setEndTime", endTime);
           vm.$store.dispatch("summaryData/updateData");
+          vm.$store.dispatch("detailData/getDataByTime");
+
         } else {
           //direkt filtern
         }

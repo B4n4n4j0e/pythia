@@ -7,5 +7,8 @@ export default {
         }
         return Api().get('/dns-top-k')
     },
+    post(data){
+        return Api().post('/dns-top-k', data)
+    }
 
 }

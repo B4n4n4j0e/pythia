@@ -7,5 +7,8 @@ export default {
         }
         return Api().get('/ports-of-interest')
     },
+    post(data){
+        return Api().post('/ports-of-interest', data)
+    }
 
 }

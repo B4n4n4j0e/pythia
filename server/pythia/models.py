@@ -2,16 +2,17 @@ from pythia import db
 from sqlalchemy.dialects.sqlite import FLOAT
 from _datetime import datetime
 
-class DnsModel(db.Model):
+class DNSModel(db.Model):
     __tablename__ = 'dns'
     uid = db.Column('uid',db.String, primary_key=True)
     query_text = db.Column('query',db.String, primary_key=True)
+  #  answers = db.Column('answers',db.String)
     qtype_name = db.Column('qtype_name', db.String)
     rcode_name = db.Column('rcode_name', db.String)
     connection = db.relationship('ConnectionModel', uselist=False, lazy=False, viewonly=True)
 
     def __repr__(self):
-        return f"DNS('{self.uid}','{self.query_text}','{self.qtype_name}','{self.rcode_name}')"
+        return f"DNS('{self.uid}','{self.query_text}','{self.query_text}','{self.qtype_name}','{self.rcode_name}')"
 
 class ConnectionModel(db.Model):
     __tablename__ = 'conn'
@@ -26,6 +27,8 @@ class ConnectionModel(db.Model):
     duration = db.Column(FLOAT)
     orig_ip_bytes = db.Column(db.Integer)
     resp_ip_bytes = db.Column(db.Integer)
+
+
 
     def __repr__(self):
         return f"Connection({self.ts},'{self.origin_host}',{self.origin_port},'{self.resp_host}',{self.resp_port},'{self.proto}') "

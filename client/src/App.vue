@@ -1,17 +1,17 @@
 <template>
   <v-app>
+        <Top-navigation/>
 <v-main>
-  <Top-navigation/>
   <v-container fluid>
     <router-view></router-view>
   </v-container>
 </v-main>
   </v-app>
+
 </template>
 
 <script>
 import TopNavigation from './components/TopNavigation.vue';
-
 export default {
   name: 'App',
 
@@ -30,9 +30,8 @@ created() {
 
 
   components: {
-    TopNavigation
-
-  },
+    TopNavigation,
+},
   methods: {
 
   },

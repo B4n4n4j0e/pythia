@@ -1,5 +1,5 @@
 <template>
-  <v-app-bar clipped-left app>
+  <v-app-bar clipped-right app >
     <router-link to="/">
       <v-img
         position="left"

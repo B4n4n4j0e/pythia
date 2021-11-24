@@ -7,5 +7,8 @@ export default {
         }
         return Api().get('/protocol-sum')
     },
+    post(data){
+        return Api().post('/protocol-sum', data)
+    }
 
 }

@@ -6,5 +6,8 @@ export default {
         }
         return Api().get('connections')
     },
+    post(data){
+        return Api().post('/connections', data)
+    }
 
 }

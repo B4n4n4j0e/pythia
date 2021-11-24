@@ -7,5 +7,8 @@ export default {
         }
         return Api().get('connection-summary')
     },
+    post(data){
+        return Api().post('/connection-summary', data)
+    }
 
 }

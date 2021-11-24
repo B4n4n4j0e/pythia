@@ -1,14 +1,18 @@
 <template>
+<div>
   <v-container fluid>
     <v-row no-gutters>
         <TimePicker
-          buttonText="Submit summary"
+          buttonText="Submit"
           buttonColor="primary"
-          @sendTimestamps="submitSummaryTime"
+          @sendTimestamps="submitByTime"
         />
     </v-row>
 
 <v-row>
+  <v-col cols="6">
+    <FilterView/> 
+  </v-col>
     <v-col v-for="view in views" v-bind:key="view.chartNumber" :cols="view.cols">
       <component v-bind:isSummary="view.isSummary" v-bind:chartNumber="view.chartNumber" v-bind:data="view.isSummary ? $store.getters['summaryData/dataByType'](view.type):  $store.getters['detailData/dataByType'](view.type)" v-bind:is="view.view" > </component>
     </v-col>
@@ -19,7 +23,7 @@
       </div>
 <ViewDialog/>
   </v-container>
-
+</div>
 </template>
 
 <script>
@@ -32,6 +36,7 @@ import DNSTable from "./DNSTable.vue";
 import BarChartHorizontal from "./BarChartHorizontal.vue";
 import TimePicker from "./TimePicker.vue";
 import ViewDialog from "./ViewDialog.vue";
+import FilterView from "./Filter.vue";
 
  
 export default {
@@ -44,7 +49,8 @@ export default {
     DNSTable,
     BarChartHorizontal,
     TimePicker,
-    ViewDialog
+    ViewDialog,
+    FilterView
   },
 
   name: "Dashboard",
@@ -61,18 +67,11 @@ export default {
   },
 
   methods: {
-    /*
-      sets start and end time in store and requests new data from store
-      */
-    submitDetailTime(startTimestamp, endTimestamp) {
-      this.$store.commit("setStartTime", startTimestamp);
-      this.$store.commit("setEndTime", endTimestamp);
-      this.$store.dispatch("getDashboardDataByTime");
-    },
-    submitSummaryTime(startTimestamp, endTimestamp) {
+    submitByTime(startTimestamp, endTimestamp) {
       this.$store.commit("setStartTime", startTimestamp);
       this.$store.commit("setEndTime", endTimestamp);
       this.$store.dispatch("summaryData/getDataByTime");
+      this.$store.dispatch("detailData/getDataByTime");
     },
   },
 };

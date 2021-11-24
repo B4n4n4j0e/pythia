@@ -22,7 +22,7 @@ function getElementByChartType(state, type) {
             return state.topKDNSQueries
         case 'portsOfInterest':
             return state.portsOfInterest
-        case 'connectionSummaryPerHour': 
+        case 'connectionSummary': 
             return state.connectionSummary
         case 'protocolSummary':
             return state.protocolSummary
@@ -36,9 +36,44 @@ function getElementByChartType(state, type) {
 }
 
 
+function dispatchViewByType(context, type) {
+    switch (type) {
+        case 'topKRespHosts':
+            context.dispatch('getTopKRespHosts')
+            break;
+        case 'topKRespPorts':
+            context.dispatch('getTopKRespPorts')
+            break;        
+        case 'topKOriginHosts':
+            context.dispatch('getTopKOriginHosts')
+            break;               
+        case 'topKDNSQueries':
+            context.dispatch('getTopKDNSQueries')
+            break;       
+        case 'portsOfInterest':
+            context.dispatch('getPortsOfInterest')
+            break;               
+        case 'connectionSummary':
+            context.dispatch('getConnectionSummary')
+            break;               
+        case 'protocolSummary':
+            context.dispatch('getProtocolSummary')
+            break;               
+        case 'serviceSummary':
+            context.dispatch('getServiceSummary')
+            break;       
+        case 'ipByteSummary':
+            context.dispatch('getIPByteSummary')
+            break;       
+        case 'ipByteSummaryByTime':
+            context.dispatch('getIPByteSummary')
+            break;               
+}
+}
+
 export default {
     namespaced: true,
-    state: {
+    state: {        
 
         topKRespHosts: 
         {
@@ -58,6 +93,7 @@ export default {
             viewCounter  : 0,
             tracker: false
         },
+
     topKOriginHosts: 
         {
             type: 'topKOriginHosts',
@@ -90,7 +126,7 @@ export default {
 
     connectionSummary: 
         {
-            type: 'connectionSummaryPerHour',
+            type: 'connectionSummary',
             payload: [],
             filter: new Set(),
             viewCounter  : 0,
@@ -104,7 +140,6 @@ export default {
             filter: new Set(),
             viewCounter  : 0,
             tracker: false
-
         },
     
     serviceSummary: 
@@ -114,7 +149,6 @@ export default {
             filter: new Set(),
             viewCounter  : 0,
             tracker: false
-
         },
 
     ipByteSummary: 
@@ -140,8 +174,7 @@ export default {
 
     mutations: {
 
-        incrementViewCounter(state, type) {
-            const view = getElementByChartType(state, type)
+        incrementViewCounter(state, view) {
             view.viewCounter +=1;
 
         },
@@ -151,11 +184,11 @@ export default {
             view.viewCounter -=1;
         },
 
+
         setFilter(state, data) {
                 var element = getElementByChartType(state,data.type)
                 element.filter.add(data.filter)
                 element.tracker = !element.tracker            
-            
 
         },
 
@@ -163,6 +196,53 @@ export default {
                 var element = getElementByChartType(state,data.type)
                 element.filter.delete(data.filter)
                 element.tracker = !element.tracker            
+        },
+        removeAllFilters(state) {
+                state.topKRespHosts.filter = new Set()
+                state.topKRespPorts.filter = new Set()
+                state.topKOriginHosts.filter = new Set()
+                state.topKDNSQueries.filter = new Set()
+                state.portsOfInterest.filter = new Set()
+                state.connectionSummary.filter = new Set()
+                state.protocolSummary.filter = new Set()
+                state.serviceSummary.filter = new Set()
+                state.ipByteSummary.filter = new Set()
+                state.ipByteSummaryByTime.filter = new Set()
+        },
+
+        removeFilterByFilterName(state, filter) {
+            switch (filter.category) {
+                case 'id_resp_h':
+                    state.topKRespHosts.filter.delete(filter.filter)
+                    state.topKRespHosts.tracker = !state.topKRespHosts.tracker
+                    break;
+                case 'id_orig_h':
+                    state.topKOriginHosts.filter.delete(filter.filter)
+                    state.topKOriginHosts.tracker = !state.topKOriginHosts.tracker
+
+                    break;
+                case 'ports':
+                    state.topKRespPorts.filter.delete(filter.filter)
+                    state.topKRespPorts.tracker = !state.topKRespPorts.tracker
+                    state.portsOfInterest.filter.delete(filter.filter)
+                    state.portsOfInterest.tracker = !state.portsOfInterest.tracker
+                    break;
+                case 'proto':
+                    state.protocolSummary.filter.delete(filter.filter)
+                    state.protocolSummary.tracker = !state.protocolSummary.tracker
+                    break;
+                case 'service':
+                    state.serviceSummary.filter.delete(filter.filter)
+                    state.serviceSummary.tracker = !state.serviceSummary.tracker
+                    break;
+                case 'query_text':
+                    state.topKDNSQueries.filter.delete(filter.filter)
+                    state.topKDNSQueries.tracker = !state.topKDNSQueries.tracker
+                    break;
+                default:
+                    break;
+            }
+    
         },
 
 
@@ -216,7 +296,11 @@ export default {
         },
 
         incrementViewCounter(context, type) {
-            context.commit('incrementViewCounter',type)
+            const view = getElementByChartType(context.state, type)
+            if (view.viewCounter == 0) {
+                dispatchViewByType(context,type)
+            }
+            context.commit('incrementViewCounter', view)
         },
         decrementViewCounter(context, type) {
             context.commit('decrementViewCounter',type)
@@ -293,10 +377,11 @@ export default {
             ConnectionSumService.get(context.rootState.startTime, context.rootState.endTime).then((response) => {
             response.data.forEach(element => {
                 element.ts = new Date(element.ts * 1000)
-                context.commit('setConnectionSummary', response.data);
+            })
+            context.commit('setConnectionSummary', response.data);
+
             }).catch(() => {
                 context.commit('setConnectionSummary', []);
-            })
             })
     },
 
@@ -340,6 +425,14 @@ export default {
             if (context.state.ipByteSummary.viewCounter > 0) {
                 context.dispatch('getIPByteSummary')
             }             
+        },
+
+        removeFilterByFilterName(context, filterName) {
+            context.commit('removeFilterByFilterName',filterName)
+        },
+        removeAllFilters(context) {
+            context.commit('removeAllFilters')
+
         }
 
     },
@@ -350,5 +443,52 @@ export default {
             return data
 
         },
+            
+            connectionFilters: (state) => {
+            //workaround to get changes therefore advantages of getter can be used
+            state.portsOfInterest.tracker
+            state.topKRespPorts.tracker
+            state.topKRespHosts.tracker
+            state.topKOriginHosts.tracker
+            state.protocolSummary.tracker
+            state.serviceSummary.tracker
+            state.topKDNSQueries.tracker
+            const id_resp_h = Array.from(state.topKRespHosts.filter)
+            const query_text = Array.from(state.topKDNSQueries.filter)
+            const id_origin_h = Array.from(state.topKOriginHosts.filter)
+            var ports = new Set()
+            const proto = Array.from(state.protocolSummary.filter)
+            const service = Array.from(state.serviceSummary.filter)
+            var result = {}
+            
+            state.portsOfInterest.filter.forEach(element => {
+                ports.add(element)
+            });
+            state.topKRespPorts.filter.forEach(element => {
+                ports.add(element)
+            }); 
+            ports = Array.from(ports)
+            
+            if (id_resp_h.length > 0) {
+                result['id_resp_h'] = id_resp_h
+            }
+            if (id_origin_h.length > 0) {
+                result['id_orig_h'] = id_origin_h
+            }
+            if (ports.length > 0) {
+                result['ports'] = ports
+            }
+            if (proto.length > 0) {
+                result['proto'] = proto
+            }
+            if (service.length > 0) {
+                result['service'] = service
+            }
+            if (query_text.length > 0) {
+                result['query_text'] = query_text
+            }
+            return result
+
+        }
     }
 }

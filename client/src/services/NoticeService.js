@@ -8,5 +8,8 @@ export default {
         }
         return Api().get('notices')
     },
-
+    
+    post(data){
+            return Api().post('/notices', data)
+    }
 }

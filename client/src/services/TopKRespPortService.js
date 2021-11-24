@@ -7,5 +7,7 @@ export default {
         }
         return Api().get('/responder-port-top-k')
     },
-
+    post(data){
+        return Api().post('/responder-port-top-k', data)
+    }
 }

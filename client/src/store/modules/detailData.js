@@ -1,6 +1,29 @@
 import ConnectionsService from '../../services/ConnectionService';
 import DNSConnectionService from '../../services/DNSConnectionService';
 import NoticeService from '../../services/NoticeService';
+import ServiceSumService from '../../services/ServiceSumService';
+import ConnectionSumService from '../../services/ConnectionSumService'
+import IPByteSummaryService from '../../services/IPByteSummaryService';
+import ProtocolSumService from '../../services/ProtocolSumService';
+import TopKDNSQueriesService from '../../services/TopKDNSQueriesService';
+import TopKOriginHostService from '../../services/TopKOriginHostService';
+import TopKRespPortService from '../../services/TopKRespPortService';
+import TopKRespHostService from '../../services/TopKRespHostService';
+import PortsOfInterestService from '../../services/PortsOfInterestService';
+
+/*
+import PortsOfInterestService from '../../services/PortsOfInterestService';
+import TopKRespHostService from '../../services/TopKRespHostService';
+import TopKRespPortService from '../../services/TopKRespPortService';
+import TopKOriginHostService from '../../services/TopKOriginHostService';
+import TopKDNSQueriesService from '../../services/TopKDNSQueriesService';
+*/
+
+
+
+
+
+
 
 function getElementByChartType(state, type) {
     switch (type) {
@@ -14,10 +37,8 @@ function getElementByChartType(state, type) {
             return state.topKDNSQueries
         case 'portsOfInterest':
             return state.portsOfInterest
-        case 'connectionSummaryPerHour':
-            return state.connectionSummaryPerHour
-        case 'connectionSummaryPerMinute':
-            return state.connectionSummaryPerHour
+        case 'connectionSummary':
+            return state.connectionSummary
         case 'protocolSummary':
             return state.protocolSummary
         case 'serviceSummary':
@@ -35,21 +56,73 @@ function getElementByChartType(state, type) {
     }
 }
 
+
+function dispatchViewByType(context, type) {
+    switch (type) {
+        case 'topKRespHosts':
+            context.dispatch('getTopKRespHosts')
+            break;
+        case 'topKRespPorts':
+            context.dispatch('getTopKRespPorts')
+            break;        
+        case 'topKOriginHosts':
+            context.dispatch('getTopKOriginHosts')
+            break;               
+        case 'topKDNSQueries':
+            context.dispatch('getTopKDNSQueries')
+            break;       
+        case 'portsOfInterest':
+            context.dispatch('getPortsOfInterest')
+            break;               
+        case 'connectionSummary':
+            context.dispatch('getConnectionSummary')
+            break;               
+        case 'protocolSummary':
+            context.dispatch('getProtocolSummary')
+            break;               
+        case 'serviceSummary':
+            context.dispatch('getServiceSummary')
+            break;       
+        case 'ipByteSummary':
+            context.dispatch('getIPByteSummary')
+            break;       
+        case 'ipByteSummaryByTime':
+            context.dispatch('getIPByteSummary')
+            break;               
+        case 'notices':
+            context.dispatch('getNotices')
+            break;               
+        case 'dNSTable':
+            context.dispatch('getDNSConnections')
+            break;               
+        case 'connectionTable':
+            context.dispatch('getConnections')
+            break;              
+        }
+}
+
+
 export default {
     namespaced: true,
     state: {
+        connectionsTableOptions: {
+            itemsPerPage: 10,
+            page: 1,
+            sortBy: [],
+            sortDesc: []
+        },
+        totalConnectionsCount: 0,
+        totalDNSQueriesCount:0,
         connectionTable: {
             type: 'connectionTable',
             payload: [],
-            filter: new Set(),
             viewCounter: 0,
-            tracker: false
+            tracker: false,
         },
 
         dNSTable: {
             type: 'dNSTable',
             payload: [],
-            filter: new Set(),
             viewCounter: 0,
             tracker: false
         },
@@ -58,7 +131,7 @@ export default {
             type: 'notices',
             payload: [],
             filter: new Set(),
-            viewCounter: 0,
+            viewCounter: 10,
             tracker: false
         },
 
@@ -85,8 +158,8 @@ export default {
             type: 'topKOriginHosts',
             payload: [],
             filter: new Set(),
-            viewCounter: 1,
-            tracker: false
+            viewCounter: 0,
+            tracker: false,
         },
 
 
@@ -110,24 +183,16 @@ export default {
 
         },
 
-        connectionSummaryPerHour:
+        connectionSummary:
         {
-            type: 'connectionSummaryPerHour',
+            type: 'connectionSummary',
             payload: [],
             filter: new Set(),
             viewCounter: 0,
             tracker: false
 
         },
-        connectionSummaryPerMinute:
-        {
-            type: 'connectionSummaryPerMinute',
-            payload: [],
-            filter: new Set(),
-            viewCounter: 0,
-            tracker: false
 
-        },
         protocolSummary:
         {
             type: 'protocolSummary',
@@ -164,27 +229,34 @@ export default {
             payload: [],
             filter: new Set(),
             viewCounter: 0,
-            tracker: false
+            tracker: false,
         }
     },
 
     mutations: {
 
-        incrementViewCounter(state, type) {
-            console.log(type)
-            const view = getElementByChartType(state, type)
+        incrementViewCounter(state, view) {
             view.viewCounter += 1;
 
         },
 
         decrementViewCounter(state, type) {
             const view = getElementByChartType(state, type)
+            if (view.viewCounter == 0) {
+                view.payload = []
+            }
             view.viewCounter -= 1;
         },
 
-
         setConnections(state, newConnections) {
             state.connectionTable.payload = newConnections;
+        },
+        setTotalConnectionsCount(state, newConnectionsCount) {
+            state.totalConnectionsCount = newConnectionsCount;
+        },
+
+        setConnectionsTableOptions(state, options) {
+            state.connectionsTableOptions = options
         },
         setNodes(state, newNodes) {
             state.nodes = newNodes;
@@ -216,12 +288,8 @@ export default {
         },
 
 
-        setConnectionSummaryPerHourPayload(state, newSummary) {
-            state.connectionSummaryPerHour.payload = newSummary
-        },
-
-        setConnectionSummaryPerMinutePayload(state, newSummary) {
-            state.connectionSummaryPerMinute.payload = newSummary
+        setConnectionSummaryPayload(state, newSummary) {
+            state.connectionSummary.payload = newSummary
         },
 
         setProtocolSummaryPayload(state, newSummary) {
@@ -240,11 +308,10 @@ export default {
             state.serviceSummary.payload = newSummary;
         },
 
-
-
     },
     actions: {
-        getConnections(context) {
+        getConnections(context, options) {
+            /*
             //context.dispatch('getNotices')
             const nodesMap = new Map()
             const topKRespHostsMap = new Map()
@@ -255,10 +322,24 @@ export default {
             const connectionSummaryPerHourMap = new Map()
             const portsOfInterestMap = new Map()
             const topKRespPortsMap = new Map()
-
-            ConnectionsService.get(context.rootState.startTime, context.rootState.endTime).then((response) => {
-                response.data.forEach(d => {
+            */
+            
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            if (options) {
+                context.commit('setConnectionsTableOptions',{'page':options.page, 'itemsPerPage':options.itemsPerPage, 'sortBy':options.sortBy, 'sortDesc': options.sortDesc})
+            }
+            const tableFilter = {
+                ...filters,
+                ...context.state.connectionsTableOptions,
+            }
+            console.log(tableFilter)
+            ConnectionsService.post(tableFilter).then((response) => {
+                console.log(response)
+                response.data.connections.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
+                    /*
                     addElementToMap(topKRespHostsMap, d['target'])
                     addElementToMap(topKOriginHostsMap, d['source'])
                     addElementToMap(nodesMap, d['target'])
@@ -301,23 +382,27 @@ export default {
                 if (portsOfInterestMap.size > 0) {
                     context.commit('setPortsOfInterestPayload', Array.from(portsOfInterestMap, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value))
                 }
-
-                context.commit('setConnections', response.data);
+*/                })
+                context.commit('setConnections', response.data.connections);
+                context.commit('setTotalConnectionsCount',response.data.total);
             }).catch(() => {
                 context.commit('setConnections', []);
             })
         },
 
         getDNSConnections(context) {
-            const topKDNSQueriesMap = new Map()
-
-            DNSConnectionService.get(context.state.startTime, context.state.endTime).then((response) => {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+          //  const topKDNSQueriesMap = new Map()
+            DNSConnectionService.post(filters).then((response) => {
                 response.data.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
+                    /*
                     addElementToMap(topKDNSQueriesMap, d['query_text'])
-
+*/
                 });
-                context.commit('setTopKDNSQueriesPayload', Array.from(topKDNSQueriesMap, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10))
+               // context.commit('setTopKDNSQueriesPayload', Array.from(topKDNSQueriesMap, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10))
                 context.commit('setDNSConnections', response.data);
             }).catch(() => {
                 context.commit('setDNSConnections', []);
@@ -325,7 +410,12 @@ export default {
         },
 
         getNotices(context) {
-            NoticeService.get(context.state.startTime, context.state.endTime).then((response) => {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+
+            NoticeService.post(filters).then((response) => {
                 response.data.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
                 });
@@ -336,7 +426,174 @@ export default {
             })
         },
 
+        getServiceSummary(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            ServiceSumService.post(filters).then((response) => {
+                response.data.forEach(d => {
+                    d.ts = new Date(d.ts * 1000)
+                });
+                context.commit('setServiceSummaryPayload', response.data);
+            }).catch(() => {
+                context.commit('setServiceSummaryPayload', []);
+            })
+        },
+
+        getProtocolSummary(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            ProtocolSumService.post(filters).then((response) => {
+                response.data.forEach(d => {
+                    d.ts = new Date(d.ts * 1000)
+                });
+                context.commit('setProtocolSummaryPayload', response.data);
+            }).catch(() => {
+                context.commit('setProtocolSummaryPayload', []);
+            })
+        },
+
+        getConnectionSummary(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            ConnectionSumService.post(filters).then((response) => {
+                response.data.forEach(d => {
+                d.ts = new Date(d.ts * 1000)})
+                context.commit('setConnectionSummaryPayload', response.data);
+            }).catch(() => {
+                context.commit('setConnectionSummaryPayload', []);
+            })
+        },
+
+        getIPByteSummaryByTime(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+             IPByteSummaryService.postByTime(filters).then((response) => {
+                response.data.forEach(d => {
+                    d.ts = new Date(d.ts * 1000)
+                });
+                context.commit('setIPByteSummaryByTimePayload', response.data);
+            }).catch(() => {
+                context.commit('setIPByteSummaryByTimePayload', []);
+            })
+        },
+        getIPByteSummary(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+             IPByteSummaryService.post(filters).then((response) => {
+                response.data.forEach(d => {
+                    d.value = d.value/1000
+                });
+                context.commit('setIPByteSummaryPayload', response.data);
+            }).catch(() => {
+                context.commit('setIPByteSummaryPayload', []);
+            })
+        },
+
+        getTopKDNSQueries(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            TopKDNSQueriesService.post(filters).then((response) => {
+                context.commit('setTopKDNSQueriesPayload', response.data);
+            }).catch(() => {
+                context.commit('setTopKDNSQueriesPayload', []);
+            })
+        },
+
+        getTopKOriginHosts(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            TopKOriginHostService.post(filters).then((response) => {
+                context.commit('setTopKOriginHostsPayload', response.data);
+            }).catch(() => {
+                context.commit('setTopKOriginHostsPayload', []);
+            })
+        },
+
+        getTopKRespHosts(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            TopKRespHostService.post(filters).then((response) => {
+                context.commit('setTopKRespHostsPayload', response.data);
+            }).catch(() => {
+                context.commit('setTopKRespHostsPayload', []);
+            })
+        },
+        getTopKRespPorts(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            TopKRespPortService.post(filters).then((response) => {
+                context.commit('setTopKRespPortsPayload', response.data);
+            }).catch(() => {
+                context.commit('setTopKRespPortsPayload', []);
+            })
+        },
+
+        getPortsOfInterest(context) {
+            const filters = context.rootGetters['summaryData/connectionFilters']
+            filters['start_time'] = context.rootState.startTime/1000
+            filters['end_time'] = context.rootState.endTime/1000
+            PortsOfInterestService.post(filters).then((response) => {
+                context.commit('setPortsOfInterestPayload', response.data);
+            }).catch(() => {
+                context.commit('setPortsOfInterestPayload', []);
+            })
+        },
+
         getDataByTime(context) {
+
+            if (context.state.ipByteSummary.viewCounter > 0) {
+                context.dispatch('getIPByteSummary')
+            }
+            if (context.state.ipByteSummaryByTime.viewCounter > 0) {
+                context.dispatch('getIPByteSummaryByTime')
+            }
+            if (context.state.serviceSummary.viewCounter > 0) {
+                context.dispatch('getServiceSummary');
+            }
+            if (context.state.protocolSummary.viewCounter > 0) {
+                context.dispatch('getProtocolSummary');
+            }
+            if (context.state.connectionSummary.viewCounter > 0) {
+                context.dispatch('getConnectionSummary');
+            }
+            if (context.state.topKDNSQueries.viewCounter > 0) {
+                context.dispatch('getTopKDNSQueries');
+            }
+            if (context.state.topKOriginHosts.viewCounter > 0) {
+                context.dispatch('getTopKOriginHosts');
+            }    
+            if (context.state.topKRespHosts.viewCounter > 0) {
+                context.dispatch('getTopKRespHosts');
+            }
+            if (context.state.topKRespPorts.viewCounter > 0) {
+                context.dispatch('getTopKRespPorts');
+            }
+            if (context.state.portsOfInterest.viewCounter > 0) {
+                context.dispatch('getPortsOfInterest');
+            }       
+            if (context.state.dNSTable.viewCounter > 0) {
+                context.dispatch('getDNSConnections');
+            }
+            if (context.state.connectionTable.viewCounter > 0) {
+               context.dispatch('getConnections'); 
+            }          
+            if (context.state.notices.viewCounter > 0) {
+                context.dispatch('getNotices');
+            }                              
+                             
+         
+
+
+            /*
             if (context.getters.connectionViewCounter > 0) {
                 context.dispatch('getConnections').then(() => {
                 });
@@ -362,7 +619,7 @@ export default {
                 context.dispatch('getIPByteSummaryByTime')
             }
             context.dispatch('updateData')
-
+*/
         },
 
         updateData(context) {
@@ -393,15 +650,27 @@ export default {
             if (context.state.ipByteSummary.viewCounter > 0) {
                 context.dispatch('getIPByteSummary')
             }
+            if (context.state.connectionTable.viewCounter > 0) {
+                context.dispatch('getConnections');
+            }          
+            if (context.state.notices.viewCounter > 0) {
+                context.dispatch('getNotices');
+            }                              
+                       
+
         },
 
         incrementViewCounter(context, type) {
-            context.commit('incrementViewCounter', type)
+            const view = getElementByChartType(context.state, type)
+            if (view.viewCounter == 0) {
+                dispatchViewByType(context,type)
+            }
+            context.commit('incrementViewCounter', view)
         },
         decrementViewCounter(context, type) {
             context.commit('decrementViewCounter', type)
         },
-
+    
     },
     getters: {
         dataByType: (state) => (type) => {
@@ -569,7 +838,7 @@ export default {
     }
 }
 
-
+/*
 function addDateElementToMap(map, timestamp, coeff) {
     var date = {
         ts: new Date(Math.floor(timestamp.getTime() / coeff) * coeff),
@@ -603,7 +872,7 @@ function addPortsOfInterestToMap(map, port, portsOfInterest) {
         }
     }
 }
-
+*/
 
 
 

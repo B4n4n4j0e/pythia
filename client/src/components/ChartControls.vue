@@ -1,4 +1,4 @@
-<template>
+  <template>
     <div class="d-flex flex-row">    
         <v-card-text class="ml-4"> {{view.dataLabel || data.startTime}} </v-card-text>
           <v-btn justify-right class="ml-4" @click="freezeView" text :color="view.isFrozen ? 'blue' : 'grey'">

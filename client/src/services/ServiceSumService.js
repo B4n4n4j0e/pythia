@@ -7,5 +7,8 @@ export default {
         }
         return Api().get('/service-sum')
     },
+    post(data){
+        return Api().post('/service-sum', data)
+    }
 
 }

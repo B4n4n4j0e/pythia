@@ -26,6 +26,6 @@ Log::add_filter(Notice::LOG,[$name="notice_filter", $include=set("ts","uid","not
 
 Log::add_filter(Weird::LOG,[$name="weird_filter", $include=set("ts","uid","name"), $path="var/db/pythia", $config=table(["tablename"]="weird"),$writer=Log::WRITER_SQLITE]);
 
-Log::add_filter(DNS::LOG,[$name="dns_filter", $include=set("uid","query","qtype_name","rcode_name"), $path="/var/db/pythia", $config=table(["tablename"]="dns"),$writer=Log::WRITER_SQLITE]);
+Log::add_filter(DNS::LOG,[$name="dns_filter", $include=set("uid","query","target","qtype_name","rcode_name"), $path="/var/db/pythia", $config=table(["tablename"]="dns"),$writer=Log::WRITER_SQLITE]);
 
 }

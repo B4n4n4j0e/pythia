@@ -1,5 +1,6 @@
 <template>
   <v-card>
+    <v-btn @click="test">Test</v-btn>
     <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
 
     <v-card-title>
@@ -15,6 +16,8 @@
       :headers="headers"
       :items="data.payload"
       :search="search"
+      :options.sync="options"
+
     >
         <template v-slot:item.ts = "{item}"> 
       <span> {{item.ts.toLocaleString()}}</span>
@@ -44,11 +47,13 @@ export default {
   },
   data: () => ({
     search: "",
+    options: {},
     headers: [
       { text: "Timestamp", value: "ts" },
       { text: "Origin Host", value: "connection.origin_host" },
       { text: "Responder Host", value: "connection.resp_host" },
       { text: "Query", value: "query_text" },
+     // { text: "Answers", value: "answers" },
       { text: "Query type", value: "qtype_name" },
       { text: "Error Code", value: "rcode_name" },
       { text: "UID", value: "uid" },
@@ -59,6 +64,11 @@ export default {
   },
 
   methods: {
+        test() {
+      console.log(this.options)
+      console.log(this.options.handler)
+
+    }
 
   },
 };
