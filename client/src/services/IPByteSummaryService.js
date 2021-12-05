@@ -3,21 +3,21 @@ import Api from './Api'
 export default {
     get(start, end) {
         if (start && end) {
-            return Api().get("/ip-kilobyte-sum",{params: {'start-time': start/1000, 'end-time': end/1000}})
+            return Api().get("/ip-byte-sum",{params: {'start-time': start/1000, 'end-time': end/1000}})
         }
-        return Api().get('/ip-kilobyte-sum')
+        return Api().get('/ip-byte-sum')
     },
     post(data){
-        return Api().post('/ip-kilobyte-sum', data)
+        return Api().post('/ip-byte-sum', data)
     },
     getByTime(start, end) {
         if (start && end) {
-            return Api().get("/ip-kilobyte-sum/by-time",{params: {'start-time': start/1000, 'end-time': end/1000}})
+            return Api().get("/ip-byte-sum/by-time",{params: {'start-time': start/1000, 'end-time': end/1000}})
         }
-        return Api().get('/ip-kilobyte-sum/by-time')
+        return Api().get('/ip-byte-sum/by-time')
     },
     postByTime(data){
-        return Api().post('/ip-kilobyte-sum/by-time', data)
+        return Api().post('/ip-byte-sum/by-time', data)
     }
     
     

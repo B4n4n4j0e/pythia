@@ -1,6 +1,6 @@
 from pythia import api, db
 from flask_restful import Resource, fields, marshal_with, abort, reqparse, marshal
-from flask import request
+from flask import request, current_app
 from pythia.models import *
 import sqlite3
 import subprocess
@@ -8,8 +8,11 @@ import re
 from sqlalchemy import and_, or_, desc, func, literal_column, types, asc
 from sqlalchemy.sql import func, expression
 import copy
+import os
+from werkzeug.utils import secure_filename
+import json
 
-DB_PATH = "pythia/pythia.sqlite"
+ALLOWED_EXTENSIONS = {'pcap'}
 PORTS_OF_INTEREST = ["10/tcp", "21/tcp", "22/tcp", "23/tcp", "25/tcp", "80/tcp", "110/tcp", "139/tcp", "443/tcp",
                      "445/tcp", "3389/tcp", "10/udp", "53/udp",
                      "67/udp", "123/udp", "135/udp", "137/udp", "138/udp", "161/udp", "445/udp", "631/udp", "1434/udp"]
@@ -17,20 +20,25 @@ dns_resource_fields = {
     'ts': fields.Float(attribute='connection.ts'),
     'uid': fields.String,
     'query_text': fields.String,
-  #  'answers': fields.String,
-    'qtype_name': fields.String,
-    'rcode_name': fields.String,
-    'connection.origin_host': fields.String,
-    'connection.resp_host': fields.String
+    'q_answers': fields.String,
+    'q_type': fields.String,
+    'q_rcode': fields.String,
+    'source': fields.String(attribute='connection.source'),
+    'target': fields.String(attribute='connection.target')
+}
+
+dns_resources_fields = {
+    'dNSConnections': fields.Nested(dns_resource_fields),
+    'total': fields.Integer
 }
 
 connection_resource_fields = {
     'ts': fields.Float,
     'uid': fields.String,
-    'source': fields.String(attribute='origin_host'),
-    'origin_port': fields.String,
-    'target': fields.String(attribute='resp_host'),
-    'resp_port': fields.String,
+    'source': fields.String(attribute='source'),
+    'orig_p': fields.String,
+    'target': fields.String(attribute='target'),
+    'resp_p': fields.String,
     'proto': fields.String,
     'service': fields.String,
     'duration': fields.Float,
@@ -44,18 +52,31 @@ connections_resource_fields = {
     'total': fields.Integer
 }
 
+
+
+
 notice_resource_fields = {
     'ts': fields.Float,
-    'uid': fields.String,
-    'connection.origin_host': fields.String,
-    'connection.resp_host': fields.String,
+    'notice_uid': fields.String,
+    'notice_source': fields.String(attribute='connection.source'),
+    'notice_target': fields.String(attribute='connection.target'),
     'note': fields.String,
     'msg': fields.String
 }
 
+notices_resource_fields  = {
+    'notices': fields.Nested(notice_resource_fields),
+    'total': fields.Integer
+}
+
 dns_top_k_resource_fields = {
-    'name': fields.String(attribute='query'),
+    'name': fields.String(attribute='query_text'),
     'value': fields.Integer(attribute='counter'),
+}
+default_top_k_fields = {
+    'name': fields.String,
+    'value': fields.Integer(attribute='counter'),
+
 }
 
 kilo_bytes_sum_by_time_resource_fields = {
@@ -74,7 +95,7 @@ host_top_k_resource_fields = {
 }
 
 port_sum_resource_fields = {
-    'name': fields.String(attribute='p'),
+    'name': fields.String(attribute='port'),
     'value': fields.Integer(attribute='counter'),
 }
 
@@ -98,32 +119,94 @@ status_resource_fields = {
     'type': fields.String,
     'host': fields.String,
     'status': fields.String,
-
 }
 
 parser = reqparse.RequestParser()
-parser.add_argument('start_time', type=int)
-parser.add_argument('end_time', type=int)
-parser.add_argument('uid', type=str, action='append')
-parser.add_argument('ports', type=str, action='append')
-parser.add_argument('id_resp_h', type=str, action='append')
-parser.add_argument('id_orig_h', type=str, action='append')
-parser.add_argument('proto', type=str, action='append')
-parser.add_argument('service', type=str, action='append')
-# parser.add_argument('duration', type=int)
-# parser.add_argument('orig_ip_bytes', type=str)
-# parser.add_argument('resp_ip_bytes', type=str)
-parser.add_argument('query_text', type=str, action='append')
-parser.add_argument('target', type=str, action='append')
-parser.add_argument('qtype_name', type=str, action='append')
-parser.add_argument('rcode_name', type=str, action='append')
-parser.add_argument('note', type=str, action='append')
+parser.add_argument('filters', type=dict)
+parser.add_argument('negative_filters', type=dict)
+parser.add_argument('table_options',type=dict)
 
-table_parser = copy.deepcopy(parser)
-table_parser.add_argument('itemsPerPage', type=int)
-table_parser.add_argument('page', type=int)
-table_parser.add_argument('sortBy', type=str,action='append')
-table_parser.add_argument('sortDesc', type=bool)
+nested_filter_parser = reqparse.RequestParser()
+nested_filter_parser.add_argument('uid', type=str, action='append', location=('filters',))
+nested_filter_parser.add_argument('resp_p', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('orig_p', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('start_time', type=int,location=('filters',))
+nested_filter_parser.add_argument('end_time', type=int,location=('filters',))
+nested_filter_parser.add_argument('target', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('source', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('proto', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('service', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('query_text', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('q_answers', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('q_type', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('q_rcode', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('duration', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('resp_ip_bytes', type=str, action='append',location=('filters',))
+nested_filter_parser.add_argument('orig_ip_bytes', type=str, action='append',location=('filters',))
+
+
+nested_message_filter_parser = reqparse.RequestParser()
+nested_message_filter_parser.add_argument('start_time', type=int,location=('filters',))
+nested_message_filter_parser.add_argument('end_time', type=int,location=('filters',))
+nested_message_filter_parser.add_argument('notice_uid', type=str, action='append', location=('filters',))
+nested_message_filter_parser.add_argument('notice_header', type=str, action='append',location=('filters',))
+nested_message_filter_parser.add_argument('notice_source', type=str, action='append',location=('filters',))
+nested_message_filter_parser.add_argument('notice_target', type=str, action='append',location=('filters',))
+
+
+nested_negative_filter_parser = reqparse.RequestParser()
+nested_negative_filter_parser.add_argument('uid', type=str, action='append', location=('negative_filters',))
+nested_negative_filter_parser.add_argument('resp_p', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('orig_p', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('target', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('source', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('proto', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('service', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('query_text', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('q_answers', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('q_type', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('q_rcode', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('duration', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('resp_ip_bytes', type=str, action='append',location=('negative_filters',))
+nested_negative_filter_parser.add_argument('orig_ip_bytes', type=str, action='append',location=('negative_filters',))
+
+nested_negative_message_filter_parser = reqparse.RequestParser()
+nested_negative_message_filter_parser.add_argument('notice_uid', type=str, action='append', location=('negative_filters',))
+nested_negative_message_filter_parser.add_argument('notice_header', type=str, action='append',location=('negative_filters',))
+nested_negative_message_filter_parser.add_argument('notice_source', type=str, action='append',location=('negative_filters',))
+nested_negative_message_filter_parser.add_argument('notice_target', type=str, action='append',location=('negative_filters',))
+
+nested_table_filter_parser = reqparse.RequestParser()
+nested_table_filter_parser.add_argument('itemsPerPage', type=int,location=('table_options',))
+nested_table_filter_parser.add_argument('page', type=int,location=('table_options',))
+nested_table_filter_parser.add_argument('sortBy', type=str,action='append',location=('table_options',))
+nested_table_filter_parser.add_argument('sortDesc', type=bool,location=('table_options',))
+
+
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+class PCAPFileUpload(Resource):
+    def post(self):
+        print(request.files)
+        if 'file' not in request.files:
+           #Error no File
+            abort(404, message='File not in attachment')
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an
+        # empty file without a filename.
+        if file.filename == '':
+           #No File Selected
+            return 
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(current_app.config["UPLOAD_FOLDER"], filename))
+            return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+
+api.add_resource(PCAPFileUpload, '/pcap-upload')
 
  
 class DNSEntries(Resource):
@@ -132,18 +215,15 @@ class DNSEntries(Resource):
         start_time = request.args.get('start-time')
         end_time = request.args.get('end-time')
         if start_time and end_time:
-            return DNSModel.query.join(ConnectionModel).filter(ConnectionModel.ts >= start_time,
+            return DNSModel.query.outerjoin(ConnectionModel).filter(ConnectionModel.ts >= start_time,
                                                                ConnectionModel.ts <= end_time).all()
         else:
             return DNSModel.query.all()
-    @marshal_with(dns_resource_fields)
-    def post(self):
+    @marshal_with(dns_resources_fields)
+    def post(self): 
         args = parser.parse_args()
-        session = DNSModel.query.join(ConnectionModel)
-        # implement note Filter
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])  
-        return session.filter(*queries).filter(or_(*port_queries)).all()
+        data = create_table_response(args,DNSModel)
+        return data
 
 api.add_resource(DNSEntries, '/dns-entries')
 
@@ -156,10 +236,7 @@ class DNSEntry(Resource):
             abort(404, message='Could not find dns entry with that uid')
         return result
 
- 
-
 api.add_resource(DNSEntry, '/dns-entry/<string:dns_uid>')
-
 
 class Connections(Resource):
     @marshal_with(connection_resource_fields)
@@ -173,22 +250,10 @@ class Connections(Resource):
 
     @marshal_with(connections_resource_fields)
     def post(self):
-        args = table_parser.parse_args()
-        session = ConnectionModel.query
-        # implement note Filter Count Query
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])  
-        queries = session.filter(*queries).filter(or_(*port_queries))
-
-        if args['sortBy'] != None:
-            queries = get_sort_query(args,queries)
-        data = queries.paginate(args['page'],args['itemsPerPage'],False).items
-        total = queries.paginate().total
-        data = {'connections': data}
-        data['total']= total
+        args = parser.parse_args()
+        data = create_table_response(args,ConnectionModel)
         return data
 api.add_resource(Connections, '/connections')
-
 
 class Connection(Resource):
     @marshal_with(connection_resource_fields)
@@ -197,7 +262,6 @@ class Connection(Resource):
         if not result:
             abort(404, message='Could not find connection with that uid')
         return result
-
 
 api.add_resource(Connection, '/connection/<string:connection_uid>')
 
@@ -208,27 +272,21 @@ class Notices(Resource):
         start_time = request.args.get('start-time')
         end_time = request.args.get('end-time')
         if (start_time and end_time):
-            return NoticeModel.query.join(ConnectionModel).filter(ConnectionModel.ts >= start_time, ConnectionModel.ts <= end_time).all()
+            return NoticeModel.query.filter(NoticeModel.ts >= start_time, NoticeModel.ts <= end_time).all()
         else:
             return NoticeModel.query.all()
-    
-    @marshal_with(notice_resource_fields)
+    @marshal_with(notices_resource_fields)
     def post(self):
         args = parser.parse_args()
-        session = NoticeModel.query.join(ConnectionModel)
-        # implement note Filter
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])  
-        return session.filter(*queries).filter(or_(*port_queries)).all()
-
+        data = create_table_response(args,NoticeModel)
+        return data
 
 api.add_resource(Notices, '/notices')
-
 
 class Notice(Resource):
     @marshal_with(notice_resource_fields)
     def get(self, notice_ts):
-        result = NoticeModel.query().filter_by(ts=notice_ts).first()
+        result = NoticeModel.query().filter_by(NoticeModel.ts).first()
         if not result:
             abort(404, message='Could not find notice with that ts')
         return result
@@ -238,285 +296,168 @@ api.add_resource(Notice, '/notice/<float:notice_ts>')
 
 
 class DNSTopK(Resource):
-    @marshal_with(dns_top_k_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-
-        if (start_time and end_time):
-            query = "SELECT query, Sum(counter) AS counter FROM dns_top_k WHERE ts >=? AND ts <= ? " \
-                    "GROUP BY query ORDER BY counter DESC LIMIT 10"
-            return get_data(query, DNSTopKEntry, (start_time, end_time))
-        else:
-            query = "SELECT query, Sum(counter) AS counter FROM dns_top_k " \
-                    "GROUP BY query ORDER BY counter DESC LIMIT 10"
-            return get_data(query, DNSTopKEntry, [])
-
-    @marshal_with(dns_top_k_resource_fields)
+        query = create_top_k_summary_query([],request.args,DNSTopKModel)
+        return query.limit(10).all()
+            
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(DNSModel.query_text.label('query'),
-                                                      func.count(DNSModel.query_text).label('counter')).join(
-            ConnectionModel)
-        # implement note Filter
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])        
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(DNSModel.query_text).order_by(desc('counter')).limit(10).all()
+        query = create_top_k_detail_query(DNSModel,args,DNSModel.query_text) 
+        return query.limit(10).all()
 
 
 api.add_resource(DNSTopK, '/dns-top-k')
 
 
 class OriginHostTopK(Resource):
-    @marshal_with(host_top_k_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT host, Sum(counter) AS counter FROM origin_host_top_k WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY host ORDER BY counter DESC LIMIT 10"
-            return get_data(query, OriginHostTopKEntry, (start_time, end_time))
-        else:
-            query = "SELECT host, Sum(counter) AS counter FROM origin_host_top_k  GROUP BY host " \
-                    "ORDER BY counter DESC LIMIT 10"
-            return get_data(query, OriginHostTopKEntry, [])
+        query = create_top_k_summary_query([],request.args,OriginHostTopKModel)
+        return query.limit(10).all()
 
-    @marshal_with(host_top_k_resource_fields)
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(ConnectionModel.origin_host.label('host'),
-                                                      func.count(ConnectionModel.origin_host).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])
-        return session.filter(*queries).group_by(ConnectionModel.origin_host).filter(or_(*port_queries)).order_by(desc('counter')).limit(10).all()
-
+        query = create_top_k_detail_query(ConnectionModel,args,ConnectionModel.source) 
+        return query.limit(10).all()
 
 api.add_resource(OriginHostTopK, '/origin-host-top-k')
 
 
 class ResponderHostTopK(Resource):
-    @marshal_with(host_top_k_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT host, Sum(counter) AS counter FROM resp_host_top_k WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY host ORDER BY counter DESC LIMIT 10"
-            return get_data(query, ResponderHostTopKEntry, (start_time, end_time))
-        else:
-            query = "SELECT host, Sum(counter) AS counter FROM resp_host_top_k  GROUP BY host " \
-                    "ORDER BY counter DESC LIMIT 10"
-            return get_data(query, ResponderHostTopKEntry, [])
-
-    @marshal_with(host_top_k_resource_fields)
+        query = create_top_k_summary_query([],request.args,ResponderHostTopKModel)
+        return query.limit(10).all()
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(ConnectionModel.resp_host.label('host'),
-                                                      func.count(ConnectionModel.resp_host).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])        
-        return session.filter(*queries).filter(*queries).filter(or_(*port_queries)).group_by(ConnectionModel.resp_host).order_by(
-            desc('counter')).limit(10).all()
+        query = create_top_k_detail_query(ConnectionModel,args,ConnectionModel.target) 
+        return query.limit(10).all()
 
 
 api.add_resource(ResponderHostTopK, '/responder-host-top-k')
 
 
 class ResponderPortTopK(Resource):
-    @marshal_with(port_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT p, prot, Sum(counter) AS counter FROM resp_port_top_k WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY prot, p ORDER BY counter DESC LIMIT 10"
-            return get_data(query, ResponderPortTopKEntry, (start_time, end_time))
-        else:
-            query = "SELECT p,prot, Sum(counter) AS counter FROM resp_port_top_k " \
-                    "GROUP BY prot, p ORDER BY counter DESC LIMIT 10"
-            return get_data(query, ResponderPortTopKEntry, [])
+            query=create_top_k_port_summary_query([],request.args,ResponderPortTopKModel)
+            return query.limit(10).all()
 
-    @marshal_with(port_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(
-            (expression.cast(ConnectionModel.resp_port, types.Unicode) + '/' + ConnectionModel.proto).label('p'),
-            func.count(literal_column('"p"')).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])        
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(literal_column('"p"')).order_by(desc('counter')).limit(10).all()
-
+        filters = nested_filter_parser.parse_args(req=args)
+        negative_filters = nested_negative_filter_parser.parse_args(req=args)
+        query=create_top_k_port_detail_query(filters,negative_filters)
+        return query.limit(10).all()
 
 api.add_resource(ResponderPortTopK, '/responder-port-top-k')
 
 
 class PortsOfInterest(Resource):
-    @marshal_with(port_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT p, prot, Sum(counter) AS counter FROM resp_poi_sum WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY prot, p ORDER BY counter DESC"
-            return get_data(query, PortsOfInterestEntry, (start_time, end_time))
-        else:
-            query = "SELECT p,prot, Sum(counter) AS counter FROM resp_poi_sum " \
-                    "GROUP BY prot, p ORDER BY counter DESC"
-            return get_data(query, PortsOfInterestEntry, [])
+            query=create_top_k_port_summary_query([],request.args,PortsOfInterestModel)
+            return query.limit(10).all()
 
-    @marshal_with(port_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        if args['ports'] != None:
-            port_args = set(args['ports'])
-            args['ports'] = [value for value in PORTS_OF_INTEREST if value in port_args ]
-        else:
-            args['ports'] = PORTS_OF_INTEREST
-        session = ConnectionModel.query.session.query((expression.cast(ConnectionModel.resp_port, types.Unicode) + '/' + ConnectionModel.proto).label('p'),func.count(literal_column('"p"')).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(literal_column('"p"')).order_by(desc('counter')).all()
+        filters = nested_filter_parser.parse_args(req=args)
+        filters = add_ports_of_interest_to_filter(filters)
+        negative_filters = nested_negative_filter_parser.parse_args(req=args)
+        query=create_top_k_port_detail_query(filters,negative_filters)
+        return query.limit(10).all()
 
 api.add_resource(PortsOfInterest, '/ports-of-interest')
 
 
 class ProtocolSum(Resource):
-    @marshal_with(protocol_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT prot, Sum(counter) AS counter FROM prot_sum WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY prot ORDER BY counter DESC"
-            return get_data(query, ProtocolSumEntry, (start_time, end_time))
-        else:
-            query = "SELECT prot, Sum(counter) AS counter FROM prot_sum " \
-                    "GROUP BY prot ORDER BY counter DESC "
-            return get_data(query, ProtocolSumEntry, [])
+        query = create_top_k_summary_query([],request.args,ProtocolSumModel)
+        return query.limit(10).all()
 
-    @marshal_with(protocol_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(ConnectionModel.proto.label('prot'),
-                                                      func.count(ConnectionModel.proto).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])        
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(ConnectionModel.proto).order_by(desc('counter')).all()
-
+        query = create_top_k_detail_query(ConnectionModel,args,ConnectionModel.proto) 
+        return query.all()
 
 api.add_resource(ProtocolSum, '/protocol-sum')
 
 
 class ServiceSum(Resource):
-    @marshal_with(service_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT service, Sum(counter) AS counter FROM service_sum WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY service ORDER BY counter DESC"
-            return get_data(query, ServiceSumEntry, (start_time, end_time))
-        else:
-            query = "SELECT service, Sum(counter) AS counter FROM service_sum " \
-                    "GROUP BY service ORDER BY counter DESC "
-            return get_data(query, ServiceSumEntry, [])
-
+        query = create_top_k_summary_query([],request.args,ServiceSumModel)
+        return query.limit(10).all()
     @marshal_with(service_sum_resource_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(ConnectionModel.service,
-                                                      func.count(ConnectionModel.service).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])        
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(ConnectionModel.service).order_by(desc('counter')).all()
-api.add_resource(ServiceSum, '/service-sum')
+        query = create_top_k_detail_query(ConnectionModel,args,ConnectionModel.service) 
+        return query.all()
 
 
-class IpKilobyteSum(Resource):
-    @marshal_with(kilo_bytes_sum_resource_fields)
+class IPByteSum(Resource):
+    @marshal_with(default_top_k_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT name, Sum(counter) AS counter FROM ip_bytes_sum WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY name ORDER BY name"
-            return get_data(query, IPKilobyteSumEntry, (start_time, end_time))
-        else:
-            query = "SELECT name, Sum(counter) AS counter FROM ip_bytes_sum GROUP BY name ORDER BY name"
-            return get_data(query, IPKilobyteSumEntry, [])
-
-    @marshal_with(kilo_bytes_sum_resource_fields)
+        query = create_top_k_summary_query([],request.args,IPByteSumModel)
+        return query.limit(10).all()
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
-        session_origin = ConnectionModel.query.session.query(literal_column('"orig"').label('name'),
-                                                             func.sum(ConnectionModel.orig_ip_bytes).label('counter'))
-        session_origin = join_models(session_origin, args)
-        session_resp = ConnectionModel.query.session.query(literal_column('"resp"').label('name'),
-                                                           func.sum(ConnectionModel.resp_ip_bytes).label('counter'))
-        session_resp = join_models(session_resp, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])
-        return session_origin.filter(*queries).filter(or_(*port_queries)).union(session_resp.filter(*queries).filter(or_(*port_queries))).all()
+        filters = nested_filter_parser.parse_args(req=args)
+        negative_filters = nested_negative_filter_parser.parse_args(req=args)
+        first_query = ConnectionModel.query.session.query(literal_column("'orig'").label('name'),(func.sum(ConnectionModel.orig_ip_bytes) / 1000).label('counter'))
+        second_query = ConnectionModel.query.session.query(literal_column("'resp'").label('name'),(func.sum(ConnectionModel.resp_ip_bytes)/1000).label('counter'))
+        first_query = join_models_if_necessary(first_query, ConnectionModel, filters, negative_filters)
+        second_query = join_models_if_necessary(second_query, ConnectionModel, filters, negative_filters)
+        first_query = apply_default_filters_to_query(first_query,filters,negative_filters)
+        second_query = apply_default_filters_to_query(second_query,filters,negative_filters)
+        return first_query.union(second_query).group_by('name').order_by(desc('counter')).all()
 
-api.add_resource(IpKilobyteSum, '/ip-kilobyte-sum')
-
+api.add_resource(IPByteSum, '/ip-byte-sum')
 
 class IpKilobyteSumByTime(Resource):
-    @marshal_with(kilo_bytes_sum_by_time_resource_fields)
+    @marshal_with(summary_resource_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-        if (start_time and end_time):
-            query = "SELECT ts,SUM(counter) as counter FROM ip_bytes_sum WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
-            return get_data(query, IPKilobyteSumEntry, (start_time, end_time))
-        else:
-            query = "SELECT ts,SUM(counter) FROM ip_bytes_sum GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
-            return get_data(query, IPKilobyteSumEntry, [])
+        timeunit = '%Y-%m-%dT%H'
+        query = create_by_time_summary_query([],request.args,IPByteSumModel,timeunit)
+        return query.all()
 
-    @marshal_with(kilo_bytes_sum_by_time_resource_fields)
+    @marshal_with(summary_resource_fields)
     def post(self):
         args = parser.parse_args()
-        session = ConnectionModel.query.session.query(ConnectionModel.ts.label('name'), func.sum(
+        timeunit = '%Y-%m-%dT%H'
+        session = ConnectionModel.query.session.query(ConnectionModel.ts.label('ts'), func.sum(
             ConnectionModel.orig_ip_bytes / 1000 + ConnectionModel.resp_ip_bytes / 1000).label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        # @todo implement filter origin host dest host
-        port_queries = create_filter_port_query([],args['ports'])
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(func.strftime('%Y-%m-%dT%H', ConnectionModel.ts, 'unixepoch')).all()
+        query = create_by_time_detail_query(ConnectionModel,session,args,ConnectionModel.ts,timeunit)
+        return query.all()        
 
 
-api.add_resource(IpKilobyteSumByTime, '/ip-kilobyte-sum/by-time')
+api.add_resource(IpKilobyteSumByTime, '/ip-byte-sum/by-time')
 
 
 class ConnectionSummary(Resource):
     @marshal_with(summary_resource_fields)
     def get(self):
-        start_time = request.args.get('start-time')
-        end_time = request.args.get('end-time')
-
-        if (start_time and end_time):
-            query = "SELECT ts,COUNT(*) as counter FROM conn WHERE ts >=? AND " \
-                    "ts <= ? GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
-            return get_data(query, ConnectionHourEntry, (start_time, end_time))
-        else:
-            query = "SELECT ts,COUNT(*) as counter FROM conn GROUP BY strftime('%Y-%m-%dT%H',ts,'unixepoch')"
-            return get_data(query, ConnectionHourEntry, [])
+        timeunit = '%Y-%m-%dT%H'
+        query = create_by_time_summary_query([],request.args,ConnectionSumModel,timeunit)
+        return query.all()
 
     @marshal_with(summary_resource_fields)
     def post(self):
         args = parser.parse_args()
+        timeunit = '%Y-%m-%dT%H'
         session = ConnectionModel.query.session.query(ConnectionModel.ts, func.count().label('counter'))
-        session = join_models(session, args)
-        queries = create_filter_query([], args)
-        port_queries = create_filter_port_query([],args['ports'])
-        return session.filter(*queries).filter(or_(*port_queries)).group_by(func.strftime('%Y-%m-%dT%H', ConnectionModel.ts, 'unixepoch')).all()
+        query = create_by_time_detail_query(ConnectionModel,session,args,ConnectionModel.ts,timeunit)
+
+        return query.all()
 
 
 api.add_resource(ConnectionSummary, '/connection-summary')
@@ -546,71 +487,319 @@ class ZeekStatus(Resource):
 
 api.add_resource(ZeekStatus, '/zeek-status')
 
-
-def get_data(query, cl, parameter):
-    try:
-        conn = sqlite3.connect(DB_PATH)
-    except ConnectionError as e:
-        print(e)
-    cur = conn.cursor()
-    rows = cur.execute(query, parameter)
-    result = []
-    for row in rows:
-        result.append(cl(*row))
-    if not result:
-        abort(404, message=cl.error_message)
-
-    return result
-
-def create_filter_port_query(queries,ports):
-    if ports != None:
+def create_filter_port_conditions(queries,args):
+    if args['resp_p'] != None:
+        ports = args['resp_p']
         for port in ports:
             port = port.split('/')
             if len(port) > 1:
-                queries.append(and_(ConnectionModel.resp_port == port[0], ConnectionModel.proto == (port[1])))
+                queries.append(and_(ConnectionModel.resp_p == port[0], ConnectionModel.proto == (port[1])))
             else:
-                queries.append(ConnectionModel.resp_port == port)
+                queries.append(ConnectionModel.resp_p == port)
+    if args['orig_p'] != None:
+        ports = args['orig_p']
+        for port in ports:
+            port = port.split('/')
+            if len(port) > 1:
+                queries.append(and_(ConnectionModel.resp_p == port[0], ConnectionModel.proto == (port[1])))
+            else:
+                queries.append(ConnectionModel.resp_p == port)
     return queries
-def create_filter_query(queries, filters):
+
+def create_negative_filter_port_conditions(queries,args):
+   
+    if args['resp_p'] != None:
+        ports = args['resp_p']
+        for port in ports:
+            port = port.split('/')
+            if len(port) > 1:
+                queries.append(and_(ConnectionModel.resp_p != port[0], ConnectionModel.proto != (port[1])))
+            else:
+                queries.append(ConnectionModel.resp_p != port)
+    if args['orig_p'] != None:
+        ports = args['orig_p']
+        for port in ports:
+            port = port.split('/')
+            if len(port) > 1:
+                queries.append(and_(ConnectionModel.resp_p != port[0], ConnectionModel.proto != (port[1])))
+            else:
+                queries.append(ConnectionModel.resp_p != port)
+    return queries
+
+
+def create_filter_conditions(queries, filters ):
     if filters['query_text'] != None:
         queries.append(func.lower(DNSModel.query_text).in_(filters['query_text']))
+    if filters['q_type'] != None:
+        queries.append(DNSModel.qtype_name.in_(filters['q_type']))
+    if filters['q_rcode'] != None:
+        queries.append(DNSModel.rcode_name.in_(filters['q_rcode']))
+    if filters['q_answers'] != None:
+        for elem in filters['q_answers']:
+            queries.append(DNSModel.answers.ilike("%"+elem+"%"))
     if filters['start_time'] != None:
         queries.append(ConnectionModel.ts >= filters['start_time'])
     if filters['end_time'] != None:
         queries.append(ConnectionModel.ts <= filters['end_time'])
-    if filters['id_orig_h'] != None:
-        queries.append(ConnectionModel.origin_host.in_(filters['id_orig_h']))
-    if filters['id_resp_h'] != None:
-        queries.append(ConnectionModel.resp_host.in_(filters['id_resp_h']))
+    if filters['source'] != None:
+        queries.append(ConnectionModel.source.in_(filters['source']))
+    if filters['target'] != None:
+        queries.append(ConnectionModel.target.in_(filters['target']))
     if filters['proto'] != None:
         queries.append(func.lower(ConnectionModel.proto).in_(filters['proto']))
     if filters['service'] != None:
         queries.append(func.lower(ConnectionModel.service).in_(filters['service']))
+    if filters['uid'] != None:
+        queries.append(ConnectionModel.uid.in_(filters['uid']))
+    if filters['orig_ip_bytes'] != None:
+        create_comparison_filter_conditions('orig_ip_bytes',filters['orig_ip_bytes'],queries)
+    if filters['resp_ip_bytes'] != None:        
+        create_comparison_filter_conditions('resp_ip_bytes',filters['resp_ip_bytes'],queries )
+    if filters['duration'] != None:        
+        create_comparison_filter_conditions('duration',filters['duration'],queries)
     return queries
 
 
-def join_models(session, filters):
+def create_negative_filter_conditions(queries, filters ):
     if filters['query_text'] != None:
-        session = session.join(DNSModel)
-        # @todo implement message filter
-    #  if filters['msg']!= None :
-    #      session =  session.join(NoticeModel)
-    return session
+        queries.append(func.lower(DNSModel.query_text).notin_(filters['query_text']))
+    if filters['q_type'] != None:
+        queries.append(DNSModel.qtype_name.notin_(filters['q_type']))
+    if filters['q_rcode'] != None:
+        queries.append(DNSModel.rcode_name.notin_(filters['q_rcode']))
+    if filters['q_answers'] != None:
+        for elem in filters['q_answers']:
+            queries.append(DNSModel.answers.notilike("%"+elem+"%"))
+    if filters['source'] != None:
+        queries.append(ConnectionModel.source.notin_(filters['source']))
+    if filters['target'] != None:
+        queries.append(ConnectionModel.target.notin_(filters['target']))
+    if filters['proto'] != None:
+        queries.append(func.lower(ConnectionModel.proto).notin_(filters['proto']))
+    if filters['service'] != None:
+        queries.append(func.lower(ConnectionModel.service).notin_(filters['service']))
+    if filters['uid'] != None:
+        queries.append(ConnectionModel.uid.notin_(filters['uid']))
+    if filters['orig_ip_bytes'] != None:
+        create_negative_comparison_filter_conditions('orig_ip_bytes',filters['orig_ip_bytes'])
+    if filters['resp_ip_bytes'] != None:        
+        create_negative_comparison_filter_conditions('resp_ip_bytes',filters['resp_ip_bytes'] )
+    if filters['duration'] != None:        
+        create_negative_comparison_filter_conditions('duration',filters['duration'] )
+    return queries
+
+def create_comparison_filter_conditions(filter_name,filter_args,queries ):
+    for filter_value in filter_args:      
+        if filter_value.startswith('>'):
+            filter_value = filter_value.strip().split('>',1)[1]
+            try:
+                float(filter_value)
+            except:
+                abort(400, message=filter_name + ' filter has wrong format')
+            queries.append(getattr(ConnectionModel,filter_name) > filter_value)
+        elif filter_value.startswith('<'):
+            filter_value = filter_value.strip().split('<',1)[1]
+            try:
+                float(filter_value)
+            except:
+                abort(400, message=filter_name + ' filter has wrong format')
+            queries.append(getattr(ConnectionModel,filter_name) < filter_value)
+            
+        elif filter_value.startswith('='):
+            filter_value = filter_value.strip().split('=',1)[1]
+            try:
+                float(filter_value)
+            except:
+                abort(400, message=filter_name + ' filter has wrong format')
+            queries.append(getattr(ConnectionModel,filter_name) == filter_value)
+        else:
+                abort(400, message=filter_name + ' filter has wrong format. It must start with < or > or =')
 
 
-def get_sort_query(args, query):
-    if args['sortBy'][0] == 'source':
-        sort_value = 'id.orig_h'
-    elif args['sortBy'][0] == 'origin_port':
-        sort_value = 'id.orig_p'
-    elif args['sortBy'][0] == 'target':
-        sort_value = 'id.resp_h'
-    elif args['sortBy'][0] == 'resp_port':
-        sort_value = 'id.resp_p'
+def create_negative_comparison_filter_conditions(filter_name,filter_args ):
+    for filter_value in filter_args:       
+        if filter_value.startswith('>'):
+            filter_value = filter_value.split('>')
+            try:
+                float(filter_value)
+            except:
+                abort(400, message=filter_name + ' filter has wrong format')
+            queries.append(getattr(ConnectionModel,filter_name) < filter_value)
+        elif filter_value.startswith('<'):
+            filter_value = filter_value.split('<')
+            try:
+                float(filter_value)
+            except:
+                abort(400, message=filter_name + ' filter has wrong format')
+            queries.append(getattr(ConnectionModel,filter_name) > filter_value)
+            
+        elif filter_value.startswith('='):
+            filter_value = filter_value.split('=')
+            try:
+                float(filter_value)
+            except:
+                abort(400, message=filter_name + ' filter has wrong format')
+            queries.append(getattr(ConnectionModel,filter_name) != filter_value)
+        else:
+                abort(400, message=filter_name + ' filter has wrong format. It must start with < or > or =')
+
+
+
+def create_notice_filter_conditions(queries,filters, negative_filters):
+    if filters['start_time'] != None:
+        queries.append(NoticeModel.ts >= filters['start_time'])
+    if filters['end_time'] != None:
+        queries.append(NoticeModel.ts <= filters['end_time'])
+    if filters['notice_target'] != None:
+        queries.append(ConnectionModel.target.in_(filters['target']))
+    if filters['notice_source'] != None:
+        queries.append(ConnectionModel.source.in_(filters['source']))
+    if filters['notice_header'] != None:
+        queries.append(NoticeModel.note.in_(filters['notice_header']))
+    if filters['notice_uid'] != None:
+        queries.append(NoticeModel.uid.in_(filters['notice_uid']))
+    if negative_filters['notice_target'] != None:
+        queries.append(ConnectionModel.target.notin_(filters['target']))
+    if negative_filters['notice_source'] != None:
+        queries.append(ConnectionModel.source.notin_(filters['source']))
+    if negative_filters['notice_header'] != None:
+        queries.append(NoticeModel.note.notin_(filters['notice_header']))
+    if negative_filters['notice_uid'] != None:
+        queries.append(NoticeModel.uid.notin_(filters['notice_uid']))
+    return queries
+
+
+def get_sort_query(args,query,model):
+    if 'target' in args["sortBy"][0]:
+        sort_value = getattr(ConnectionModel,'target')
+    elif 'source' in args["sortBy"][0]:
+        sort_value = getattr(ConnectionModel,'source')
+    elif 'ts' == args["sortBy"][0]:
+        if model == NoticeModel:
+            sort_value = getattr(NoticeModel,'ts')
+        else:
+            sort_value = getattr(ConnectionModel,'ts')
     else:
-        sort_value = args['sortBy'][0]
-
+        sort_value = getattr(model,args["sortBy"][0])
     if args['sortDesc']:
         return query.order_by(desc(sort_value))
+    return query.order_by(sort_value)
 
-    return query.order_by(asc(sort_value))
+
+
+def create_table_response(args,model):
+    session = model.query
+    
+    if model == NoticeModel:
+        filters = nested_message_filter_parser.parse_args(req=args)
+        negative_filters = nested_negative_message_filter_parser.parse_args(req=args)
+        session = apply_notice_filters_to_query(session,filters,negative_filters)
+    else: 
+        filters = nested_filter_parser.parse_args(req=args)
+        negative_filters = nested_negative_filter_parser.parse_args(req=args)
+        session = apply_default_filters_to_query(session,filters,negative_filters)
+
+    session = join_models_if_necessary(session, model, filters, negative_filters)
+    
+    table_filter = nested_table_filter_parser.parse_args(req=args)
+    if table_filter['sortBy'] != None:
+        session = get_sort_query(table_filter,session,model)
+    data = session.paginate(page=table_filter['page'],per_page=table_filter['itemsPerPage'],max_per_page=None,error_out=False).items
+    total = session.paginate().total
+    data = {model.get_response_name(): data}
+    data['total']= total
+    return data
+
+
+def create_top_k_summary_query(queries,args,model):
+    queries = filter_time_for_query(queries,args,model)
+    return model.query.session.query(model.name,func.sum(model.counter).label('counter')).filter(*queries).group_by(model.name).order_by(desc('counter'))
+
+
+def create_by_time_detail_query(model,session,args,count_attribute,timeunit):
+        filters = nested_filter_parser.parse_args(req=args)
+        negative_filters = nested_negative_filter_parser.parse_args(req=args)
+        session = join_models_if_necessary(session, model, filters, negative_filters)
+        session = apply_default_filters_to_query(session,filters,negative_filters)
+        return session.group_by(func.strftime(timeunit, model.ts, 'unixepoch')).order_by(model.ts)
+
+
+def create_by_time_summary_query(queries,args,model,timeunit):
+        queries = filter_time_for_query(queries,args,model)
+        session = model.query.session.query(model.ts.label('ts'), func.sum(model.counter).label('counter'))
+        return session.group_by(func.strftime(timeunit, model.ts, 'unixepoch')).order_by(model.ts)
+
+
+def create_top_k_detail_query(model, args, count_attribute):
+    filters = nested_filter_parser.parse_args(req=args)
+    negative_filters = nested_negative_filter_parser.parse_args(req=args)
+    session = model.query.session.query(count_attribute.label('name'),func.count(count_attribute).label('counter'))
+    session = join_models_if_necessary(session, model, filters, negative_filters)
+    session = apply_default_filters_to_query(session,filters,negative_filters)
+    return session.group_by('name').order_by(desc('counter'))
+
+
+def create_top_k_port_summary_query(queries,args,model):
+    queries = filter_time_for_query(queries,args,model)
+    return model.query.session.query((expression.cast(model.resp_p, types.Unicode) + '/' + model.proto).label('name'),func.sum(model.counter).label('counter')).filter(*queries).group_by('name').order_by(desc('counter'))
+
+
+def create_top_k_port_detail_query(filters, negative_filters):
+    session =  ConnectionModel.query.session.query((expression.cast(ConnectionModel.resp_p, types.Unicode) + '/' + ConnectionModel.proto).label('name'),func.count("name").label('counter'))
+    session = join_models_if_necessary(session, ConnectionModel, filters, negative_filters)
+    queries = apply_default_filters_to_query(session,filters,negative_filters)
+    queries = queries.group_by('name').order_by(desc('counter'))
+    return queries
+
+
+def create_top_k_detail_query(model, args, count_attribute):
+    filters = nested_filter_parser.parse_args(req=args)
+    negative_filters = nested_negative_filter_parser.parse_args(req=args)
+    session = model.query.session.query(count_attribute.label('name'),func.count(count_attribute).label('counter'))
+    session = join_models_if_necessary(session, model, filters, negative_filters)
+    session = apply_default_filters_to_query(session,filters,negative_filters)
+    return session.group_by('name').order_by(desc('counter'))
+
+
+
+def apply_default_filters_to_query(session,filters,negative_filters): 
+    negative_queries = create_negative_filter_conditions([],negative_filters)
+    queries = create_filter_conditions(negative_queries, filters)
+    negative_port_queries = create_negative_filter_port_conditions([],negative_filters)
+    port_queries = create_filter_port_conditions(negative_port_queries,filters)
+    queries = session.filter(*queries).filter(or_(*port_queries))
+    return queries
+
+def apply_notice_filters_to_query(session,filters,negative_filters):
+    queries = create_notice_filter_conditions([],filters, negative_filters)
+    queries = session.filter(*queries)
+    return queries
+
+def join_models_if_necessary(session,model,filters,negative_filters):
+    if model == DNSModel or model == NoticeModel:
+        return session.outerjoin(ConnectionModel)
+    elif args_contain_dns_filter(filters) or args_contain_dns_filter(negative_filters):
+        return session.join(DNSModel)
+    else:
+        return session
+
+def filter_time_for_query(queries,args,model):
+    start_time = args.get('start-time')
+    end_time = args.get('end-time')
+    if start_time != None:
+        queries.append(model.ts >= start_time)
+    if end_time != None:
+        queries.append(model.ts <= end_time)
+    return queries
+
+
+def args_contain_dns_filter(filters):
+    return filters['query_text'] != None or filters['q_answers'] != None  or filters['q_type'] != None or filters['q_rcode'] 
+
+def add_ports_of_interest_to_filter(filters):
+    if filters['resp_p'] != None:
+        port_args = set(filters['resp_p'])
+        filters['resp_p'] = [value for value in PORTS_OF_INTEREST if value in port_args ]
+    else:
+        filters['resp_p'] = PORTS_OF_INTEREST    
+    return filters

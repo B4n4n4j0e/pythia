@@ -77,57 +77,63 @@
 </template>
 
 <script>
+import {
+  viewDataToChartName,
+  typeDataToStoreTypeData,
+} from "../helperFunctions/labelHelperFunction";
+
 export default {
   computed: {
     dataOptions() {
       var result = [
-        "Top k DNS queries",
-        "Top k origin hosts",
-        "Top k resp hosts",
-        "Top k resp ports",
+        "Connections per timeunit",
+        "Data volume summary",
+        "Data volume per timeunit",
+        "DNS queries top k",
+        "Origin hosts top k",
         "Ports of interest summary",
-        "Connections per hour",
         "Protocols summary",
+        "Resp hosts top k",
+        "Resp ports top k",
         "Services summary",
-        "Kilobytes summary",
-        "Kilobytes per hour",
       ];
       if (this.selectedDataType == "Summary Data") {
         return result;
       } else {
         result.unshift(
-          "DNS table",
           "Connection table",
-          "Notices"
+          "DNS table",
+          "Notice table"
         );
         return result;
       }
     },
+
     viewOptions() {
       var summaries = [
-        "Top k DNS queries",
-        "Top k origin hosts",
-        "Top k resp hosts",
-        "Top k resp ports",
+        "DNS queries top k", 
+        "Origin hosts top k",
+        "Resp hosts top k",
+        "Resp ports top k",
         "Ports of interest summary",
         "Protocols summary",
         "Services summary",
-        "Kilobytes summary",
+        "Data volume summary",
       ];
       var lineCharts = [
-        "Connections per hour",
-        "Kilobytes per hour",
+        "Connections per timeunit",
+        "Data volume per timeunit",
       ];
       if (summaries.includes(this.selectedData)) {
-        return ["Bar chart horizontal", "Bar chart vertical", "Pie chart"];
+        return ["Bar chart horizontal", "Bar chart vertical", "Pie chart", "TreeMap"];
       } else if (lineCharts.includes(this.selectedData)) {
         return ["Line chart"];
       } else if (this.selectedData == "Connection table") {
         return ["Connection table"];
       } else if (this.selectedData == "DNS table") {
         return ["DNS table"];
-      } else if (this.selectedData == "Notices"){
-        return ["Notices"];
+      } else if (this.selectedData == "Notice table"){
+        return ["Notice table"];
       }
       else return [];
     },
@@ -187,8 +193,8 @@ export default {
         summary = false 
       }
       var viewData = {
-        view: this.viewDataToChartName(this.selectedView),
-        type: this.typeDataToStoreTypeData(this.selectedData),
+        view: viewDataToChartName(this.selectedView),
+        type: typeDataToStoreTypeData(this.selectedData),
         dataLabel: this.selectedData,
         viewLabel: this.selectedView,
         cols: this.windowWidth,
@@ -208,8 +214,8 @@ export default {
         summary = false 
       }
       var viewData = {
-        view: this.viewDataToChartName(this.selectedView),
-        type: this.typeDataToStoreTypeData(this.selectedData),
+        view: viewDataToChartName(this.selectedView),
+        type: typeDataToStoreTypeData(this.selectedData),
         dataLabel: this.selectedData,
         viewLabel: this.selectedView,
         cols: this.windowWidth,
@@ -220,59 +226,7 @@ export default {
       this.closeDialog();
     },
 
-    viewDataToChartName(selectedView) {
-      switch (selectedView) {
-        case "Bar chart horizontal":
-          return "BarChartHorizontal";
-        case "Bar chart vertical":
-          return "BarChart";
-        case "Pie chart":
-          return "PieChart";
-        case "Line chart":
-          return "LineChart";
-        case "Connection table":
-          return "ConnectionTable";
-        case "DNS table":
-          return "DNSTable";
-        case "Notices":
-          return "Notices";
-        default:
-          break;
-      }
-    },
 
-    typeDataToStoreTypeData(typeData) {
-      switch (typeData) {
-        case "Top k DNS queries":
-          return "topKDNSQueries";
-        case "Top k origin hosts":
-          return "topKOriginHosts";
-        case "Top k resp hosts":
-          return "topKRespHosts";
-        case "Top k resp ports":
-          return "topKRespPorts";
-        case "Ports of interest summary":
-          return "portsOfInterest";
-        case "Connections per hour":
-          return "connectionSummary";
-        case "Protocols summary":
-          return "protocolSummary";
-        case "Services summary":
-          return "serviceSummary";
-        case "Kilobytes summary":
-          return "ipByteSummary";
-        case "Kilobytes per hour":
-          return "ipByteSummaryByTime";
-        case "DNS table":
-          return "dNSTable";
-        case "Connection table":
-          return "connectionTable";
-        case "Notices":
-          return "notices";
-        default:
-          break;
-      }
-    },
   },
 };
 </script>

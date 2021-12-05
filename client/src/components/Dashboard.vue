@@ -11,9 +11,9 @@
 
 <v-row>
   <v-col cols="6">
-    <FilterView/> 
+    <FilterTable/> 
   </v-col>
-    <v-col v-for="view in views" v-bind:key="view.chartNumber" :cols="view.cols">
+    <v-col v-for="(view,index) in views" v-bind:key="index" :cols="view.cols">
       <component v-bind:isSummary="view.isSummary" v-bind:chartNumber="view.chartNumber" v-bind:data="view.isSummary ? $store.getters['summaryData/dataByType'](view.type):  $store.getters['detailData/dataByType'](view.type)" v-bind:is="view.view" > </component>
     </v-col>
 
@@ -30,27 +30,29 @@
 import PieChart from "./PieChart.vue";
 import BarChart from "./BarChart.vue";
 import LineChart from "./LineChart.vue";
-import Notices from "./Notices.vue";
+import NoticeTable from "./NoticeTable.vue";
 import ConnectionTable from "./ConnectionTable.vue";
 import DNSTable from "./DNSTable.vue";
 import BarChartHorizontal from "./BarChartHorizontal.vue";
 import TimePicker from "./TimePicker.vue";
 import ViewDialog from "./ViewDialog.vue";
-import FilterView from "./Filter.vue";
+import FilterTable from "./FilterTable.vue";
+import TreeMap from "./TreeMap.vue";
 
  
 export default {
   components: {
     BarChart,
     PieChart,
-    Notices,
+    TreeMap,
+    NoticeTable,
     LineChart,
     ConnectionTable,
     DNSTable,
     BarChartHorizontal,
     TimePicker,
     ViewDialog,
-    FilterView
+    FilterTable
   },
 
   name: "Dashboard",
@@ -72,6 +74,7 @@ export default {
       this.$store.commit("setEndTime", endTimestamp);
       this.$store.dispatch("summaryData/getDataByTime");
       this.$store.dispatch("detailData/getDataByTime");
+      
     },
   },
 };

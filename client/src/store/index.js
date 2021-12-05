@@ -2,7 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex';
 import summaryData from './modules/summaryData'
 import detailData from './modules/detailData'
-
+import {changeFilterTypeToLowerCaseOrUpperCase} from '../helperFunctions/storeHelperFunctions'
 Vue.use(Vuex);
 
 export default new Vuex.Store({
@@ -21,21 +21,32 @@ export default new Vuex.Store({
         dialogCols: "",
         dialogChartNumber: "",
 
-        filters: new Map([['originHost', new Set()], ['respHost', new Set()], ['service', new Set()], ['protocol', new Set()],
-        ['query', new Set()], ['qAnswer', new Set()], ['qType', new Set()], ['qError', new Set()],
-        ['uID', new Set()], ['respByte', new Set()], ['originByte', new Set()], ['duration', new Set()],
-        ['respPort', new Set()], ['originPort', new Set()]]),
+        filters:
+        {
+            tracker: 0,
+            filters: new Map([['source', new Set()], ['target', new Set()], ['service', new Set()], ['proto', new Set()],
+            ['query_text', new Set()], ['q_answers', new Set()], ['q_type', new Set()], ['q_rcode', new Set()],
+            ['uid', new Set()], ['resp_ip_bytes', new Set()], ['orig_ip_bytes', new Set()], ['duration', new Set()],
+            ['resp_p', new Set()], ['origin_p', new Set()], ['notice_uid', new Set()], ['notice_header', new Set()],
+            ['notice_source', new Set()], ['notice_target', new Set()]])
+        },
 
-        negativeFilters: new Map([['originHost', new Set()], ['respHost', new Set()], ['service', new Set()], ['protocol', new Set()],
-        ['query', new Set()], ['qAnswer', new Set()], ['qType', new Set()], ['qError', new Set()],
-        ['uID', new Set()], ['respByte', new Set()], ['originByte', new Set()], ['duration', new Set()],
-        ['respPort', new Set()], ['originPort', new Set()]]),
+        negativeFilters: {
+            tracker: 0,
+            filters: new Map([['source', new Set()], ['target', new Set()], ['service', new Set()], ['proto', new Set()],
+            ['query_text', new Set()], ['q_answers', new Set()], ['q_type', new Set()], ['q_rcode', new Set()],
+            ['uid', new Set()], ['resp_ip_bytes', new Set()], ['orig_ip_bytes', new Set()], ['duration', new Set()],
+            ['resp_p', new Set()], ['origin_p', new Set()], ['notice_uid', new Set()], ['notice_header', new Set()],
+            ['notice_source', new Set()], ['notice_target', new Set()] ])
+        },
+        
+
         nodes: [],
         views: [
             {
                 view: 'BarChartHorizontal',
-                type: 'topKOriginHosts',
-                dataLabel: "Top k origin hosts",
+                type: 'respHostsTopK',
+                dataLabel: "Resp hosts top k",
                 viewLabel: 'Bar chart horizontal',
                 chartNumber: 30,
                 cols: 6,
@@ -53,29 +64,52 @@ export default new Vuex.Store({
     },
     mutations: {
 
+
         incrementChartNumberCounter(state) {
             state.chartNumberCounter += 1
         },
 
         addFilter(state, filter) {
-            state.filters.get(filter.name).add(filter.value)
-            console.log(state.filters.get(filter.name))
-
+            filter = changeFilterTypeToLowerCaseOrUpperCase(filter)
+            state.filters.filters.get(filter.type).add(filter.filter)
+            state.filters.tracker = state.filters.tracker + 1
         },
 
         addNegativeFilter(state, filter) {
-            state.negativeFilters.get(filter.name).add(filter.value)
-            console.log(state.negativeFilters.get(filter.name))
+            filter = changeFilterTypeToLowerCaseOrUpperCase(filter)
+            state.negativeFilters.filters.get(filter.type).add(filter.filter)
+            state.negativeFilters.tracker = state.negativeFilters.tracker - 1
 
         },
 
+        removeFilterByFilterName(state, item) {
+            if (item.isNegative) {
+                state.negativeFilters.filters.get(item.type).delete(item.filter)
+                state.negativeFilters.tracker -= 1
+            }
+            else {
+                state.filters.filters.get(item.type).delete(item.filter)
+                state.filters.tracker -= 1
+            }
+        },
+
         removeAllFilters(state) {
-            for (var [key,] of state.filters.entries()) {
-                state.filters.set(key, new Set())
+            for (var [key,] of state.filters.filters.entries()) {
+                state.filters.filters.set(key, new Set())
             }
-            for ([key,] of state.negativeFilters.entries()) {
-                state.negativeFilters.set(key, new Set())
+            state.filters.tracker -= 1
+            for ([key,] of state.negativeFilters.filters.entries()) {
+                state.negativeFilters.filters.set(key, new Set())
             }
+            state.negativeFilters.tracker -= 1
+
+        },
+
+        removeAllNegativeFilters(state) {
+            for (var [key,] of state.negativeFilters.filters.entries()) {
+                state.negativeFilters.filters.set(key, new Set())
+            }
+            state.negativeFilters.tracker -= 1
         },
 
         removeView(state, id) {
@@ -144,6 +178,7 @@ export default new Vuex.Store({
         },
     },
 
+
     actions: {
         removeViewAndDecrementViewCounter(context, id) {
             var element = context.state.views.find(el => el.chartNumber == id)
@@ -207,6 +242,58 @@ export default new Vuex.Store({
 
     },
     getters: {
+        allFilters(state) {
+            state.filters.tracker
+            state.negativeFilters.tracker
+            const result = []
+            for (var [key, value] of state.filters.filters.entries()) {
+                value.forEach(elem => {
+                    result.push({ 'type': key, 'filter': elem, 'isNegative': false })
+                })
+            }
+            for ([key, value] of state.negativeFilters.filters.entries()) {
+                value.forEach(elem => {
+                    result.push({ 'type': key, 'filter': elem, 'isNegative': true })
+                })
+            }
+            return result
+
+        },
+
+        filterByType: (state) => (type) => {
+            state.filters.tracker
+            return state.filters.filters.get(type)
+        },
+
+        negativeFilterByType: (state) => (type) => {
+            state.negativeFilters.tracker
+            return state.negativeFilters.filters.get(type)
+        },
+        filterRequestParams(state) {
+            state.filters.tracker
+            state.negativeFilters.tracker
+
+            const filters = state.filters.filters
+            const negativeFilters = state.negativeFilters.filters
+            var result = {}
+            result['filters'] = {}
+            result['filters']['start_time'] = state.startTime / 1000
+            result['filters']['end_time'] = state.endTime / 1000
+
+            for (var [key, value] of filters.entries()) {
+                if (value.size > 0) {
+                    result['filters'][key] = Array.from(value)
+                }
+            }
+            result['negative_filters'] = {}
+            for ([key, value] of negativeFilters.entries()) {
+                if (value.size > 0) {
+                    result['negative_filters'][key] = Array.from(value)
+                }
+            }
+            return result
+        },
+
 
         viewById: (state) => (id) => {
             var element = state.views.find(el => el.chartNumber == id)

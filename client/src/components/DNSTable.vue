@@ -1,25 +1,17 @@
 <template>
-  <v-card>
-    <v-btn @click="test">Test</v-btn>
-    <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
-
-    <v-card-title>
-      <v-text-field
-        v-model="search"
-        append-icon="mdi-magnify"
-        label="Search"
-        single-line
-        hide-details
-      ></v-text-field>
-    </v-card-title>
+  <v-card  max-height="750px">
+        <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <v-data-table
       :headers="headers"
       :items="data.payload"
-      :search="search"
+      :loading="loading"
       :options.sync="options"
-
+      :server-items-length="$store.state.detailData.totalDNSConnectionsCount"
+      :footer-props="{
+      'items-per-page-options': [10, 25, 50, 100]
+      }"
     >
-        <template v-slot:item.ts = "{item}"> 
+    <template v-slot:item.ts = "{item}"> 
       <span> {{item.ts.toLocaleString()}}</span>
     </template>
     </v-data-table>
@@ -30,12 +22,11 @@
 import ChartControls from "./ChartControls.vue";
 
 export default {
-  components: { ChartControls },
-  name: 'DNSTable',
  props: {
     data: {
       required: true,
     },
+
     chartNumber: {
       required: true,
       type: Number,
@@ -45,37 +36,65 @@ export default {
       type: Boolean
     }
   },
+
+  components: { ChartControls },
   data: () => ({
-    search: "",
-    options: {},
-    headers: [
+  
+    loading: true,
+  headers: [
       { text: "Timestamp", value: "ts" },
-      { text: "Origin Host", value: "connection.origin_host" },
-      { text: "Responder Host", value: "connection.resp_host" },
+      { text: "Origin Host", value: "source" },
+      { text: "Responder Host", value: "target" },
       { text: "Query", value: "query_text" },
-     // { text: "Answers", value: "answers" },
-      { text: "Query type", value: "qtype_name" },
-      { text: "Error Code", value: "rcode_name" },
+      { text: "Answers", value: "q_answers" },
+      { text: "Query type", value: "q_type" },
+      { text: "Error Code", value: "q_rcode" },
       { text: "UID", value: "uid" },
     ],
   }),
-  computed: {
+    computed: {
+      options: {
+        get() {
+          return this.$store.state.detailData.dNSTableOptions
+        },
+          set(newOptions) {
+            this.$store.commit('detailData/setDNSTableOptions',newOptions)
+         }
+         
+      },
 
+  },
+  watch: {
+
+    options: {
+      handler () {
+          this.getDataFromApi()
+        },
+        deep: true,
+      },
   },
 
   methods: {
-        test() {
-      console.log(this.options)
-      console.log(this.options.handler)
+    getDataFromApi() {
+      this.loading = true
+      this.$store.dispatch("detailData/getDNSConnections",this.options).then(() => {
+        this.loading = false
+      })
 
-    }
-
+    },
   },
-};
+
+}
 </script>
 
 <style scoped>
-g.tick {
-  fill: black;
+.v-card {
+  overflow-y: auto;
+  overflow-x: auto;
+
 }
+
 </style>
+
+
+  

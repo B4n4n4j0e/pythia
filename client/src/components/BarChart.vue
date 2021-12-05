@@ -1,16 +1,20 @@
 <template>
   <v-card>
-        <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
+    <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 300 300"></svg>
   </v-card>
 </template>
 
 <script>
-import ChartControls from '../components/ChartControls.vue';
+import ChartControls from "../components/ChartControls.vue";
 import * as d3 from "d3";
+import {
+  handleFilterClick,
+  isFiltered,
+} from "../helperFunctions/graphHelperFunctions";
 
 export default {
-  components: {ChartControls},
+  components: { ChartControls },
   name: "BarChart",
   props: {
     data: {
@@ -28,34 +32,43 @@ export default {
       required: true,
       type: Number,
     },
-        isSummary: {
+    isSummary: {
       required: true,
-      type: Boolean
-    }
-
+      type: Boolean,
+    },
   },
   data: () => ({}),
   computed: {
     id() {
       return "chart" + this.chartNumber.toString();
     },
-    filterTracker() {
-      return this.data.tracker;
+ 
+
+     filterSet() {
+      return this.$store.getters["filterByType"](this.data.filterType);
     },
+
+    negativeFilterSet() {
+      return this.$store.getters["negativeFilterByType"](this.data.filterType);
+    },
+
     payload() {
       return this.data.payload;
     },
   },
+
   watch: {
     payload: function () {
-      if (this.$store.getters.viewById(this.chartNumber).isFrozen){
-        return
+      if (this.$store.getters.viewById(this.chartNumber).isFrozen) {
+        return;
+      } else {
+        this.updateChart();
       }
-      else {
-      this.updateChart();
-      }    },
-
-    filterTracker: function () {
+    },
+      filterSet: function () {
+      this.changeFilter();
+    },
+    negativeFilterSet: function () {
       this.changeFilter();
     },
   },
@@ -139,14 +152,15 @@ export default {
         })
         .attr("width", barWidth - 5)
         .style("fill", function (d) {
-          if (vm.data.filter.has(d.name)) {
+          if (isFiltered(d, vm)) {
             return "var(--v-tertiary-base)";
           }
           return "var(--v-primary-base)";
         })
         .attr("opacity", 0.8)
-        .on('click', handleClick);
-
+        .on("click", function (d, filter) {
+          handleFilterClick(vm, filter);
+        });
       bars
         .transition()
         .duration(1000)
@@ -162,7 +176,7 @@ export default {
         .attr("width", barWidth - 1)
         .attr("width", barWidth - 5)
         .style("fill", function (d) {
-          if (vm.data.filter.has(d.name)) {
+          if (isFiltered(d, vm)) {
             return "var(--v-tertiary-base)";
           }
           return "var(--v-primary-base)";
@@ -170,38 +184,20 @@ export default {
 
       bars.exit().remove();
 
-      function handleClick(d,filter) {
-        if (vm.isSummary) {
-        
-        var data = {
-          type: vm.data.type,
-          filter: filter.name
-        }
-         if (vm.data.filter.has(data.filter)) {
-           vm.$store.commit('summaryData/removeFilter',data)
-         }
-         else {
-            vm.$store.commit('summaryData/setFilter',data)
-
-         }
-        }
-      }
     },
 
     changeFilter() {
-      const vm = this
-     d3.select("g.bars" + this.chartNumber).selectAll("rect")
-                .style("fill", function(d) {
-          if (vm.data.filter.has(d.name)){
-                  return "var(--v-tertiary-base)"
+      const vm = this;
+      d3.select("g.bars" + this.chartNumber)
+        .selectAll("rect")
+        .style("fill", function (d) {
+          if (isFiltered(d, vm)) {
+            return "var(--v-tertiary-base)";
           }
-           return "var(--v-primary-base)"
-        })
-    }
-
-
+          return "var(--v-primary-base)";
+        });
+    },
   },
-
 };
 </script>
 

@@ -1,6 +1,6 @@
   <template>
     <div class="d-flex flex-row">    
-        <v-card-text class="ml-4"> {{view.dataLabel || data.startTime}} </v-card-text>
+        <v-card-text class="ml-4"> {{view.dataLabel}} </v-card-text>
           <v-btn justify-right class="ml-4" @click="freezeView" text :color="view.isFrozen ? 'blue' : 'grey'">
               <v-icon>mdi-snowflake</v-icon> 
           </v-btn>
@@ -28,9 +28,8 @@ export default {
       view() {
         return this.$store.getters.viewById(this.chartNumber)
       },
-      data() {
-        return this.$store.getters.dataById(this.chartNumber)
-      }
+
+  
   },
 
 

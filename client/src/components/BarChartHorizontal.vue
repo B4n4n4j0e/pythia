@@ -1,13 +1,18 @@
 <template>
-  <v-card>  
-    <ChartControls v-bind:data="data" v-bind:chartNumber="chartNumber" class="mb-0" />
+  <v-card>
+    <ChartControls
+      v-bind:data="data"
+      v-bind:chartNumber="chartNumber"
+      class="mb-0"
+    />
     <svg :id="id" viewBox="0 0 660 500"></svg>
   </v-card>
 </template>
 
 <script>
 import * as d3 from "d3";
-import ChartControls from '../components/ChartControls.vue';
+import ChartControls from "../components/ChartControls.vue";
+import {handleFilterClick, isFiltered} from "../helperFunctions/graphHelperFunctions"
 export default {
   components: { ChartControls },
   name: "HorizontalBarChart",
@@ -27,50 +32,53 @@ export default {
       required: true,
       type: Number,
     },
-        isSummary: {
+    isSummary: {
       required: true,
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
-  data: () => ({
-    
-  }),
+  data: () => ({}),
 
   computed: {
     id() {
       return "chart" + this.chartNumber.toString();
     },
-    filterTracker() {
-      return this.data.tracker
-    },
-    payload() {
-      return this.data.payload
-    }
 
+    filterSet() {
+      return this.$store.getters["filterByType"](this.data.filterType);
+    },
+
+    negativeFilterSet() {
+      return this.$store.getters["negativeFilterByType"](this.data.filterType);
+    },
+
+    payload() {
+      return this.data.payload;
+    },
   },
   watch: {
     payload: function () {
-      if (this.$store.getters.viewById(this.chartNumber).isFrozen){
-        return
-      }
-      else {
-      this.updateChart();
+      if (this.$store.getters.viewById(this.chartNumber).isFrozen) {
+        return;
+      } else {
+        this.updateChart();
       }
     },
 
-    filterTracker: function() {
+    filterSet: function () {
       this.changeFilter();
-    }
+    },
+    negativeFilterSet: function () {
+      this.changeFilter();
+    },
   },
 
   mounted() {
     this.createBarChart();
-      this.updateChart();
-
+    this.updateChart();
   },
 
   methods: {
-
     createBarChart() {
       var margin = { top: 0, right: 20, bottom: 10, left: 10 },
         svg = d3.select("#" + this.id).append("g");
@@ -90,11 +98,10 @@ export default {
         "transform",
         "translate(" + margin.left + "," + margin.top + ")"
       );
-
     },
 
     updateChart() {
-     var svg = d3.select("#" + this.id)
+      var svg = d3.select("#" + this.id);
 
       var scX = d3
         .scaleLinear()
@@ -116,7 +123,7 @@ export default {
             return d.name;
           })
         );
-      const vm = this
+      const vm = this;
 
       var bar = svg
         .select("g.bars" + this.chartNumber)
@@ -134,13 +141,16 @@ export default {
           return scY(d.name);
         })
         .attr("height", scY.bandwidth())
-        .style("fill", function(d) {
-           if (vm.data.filter.has(d.name)){
-                  return "var(--v-tertiary-base)"
+        .style("fill", function (d) {
+          if (isFiltered(d,vm)) {
+            return "var(--v-tertiary-base)"
           }
-           return "var(--v-primary-base)"
+            return "var(--v-primary-base)"
+
         })
-        .on('click',handleClick);
+        .on("click",function(d,filter) {
+          handleFilterClick(vm,filter)
+        });
 
       bar
         .transition()
@@ -166,7 +176,7 @@ export default {
         .attr("y", (d) => scY(d.name) + scY.bandwidth() / 2)
         .attr("dy", "0.35em")
         .attr("dx", +4)
-        .style("fill", 'var(--v-text-base)')
+        .style("fill", "var(--v-text-base)")
         .text((d) => d.name)
         .call((text) =>
           text
@@ -179,12 +189,12 @@ export default {
       text.exit().remove();
 
       // add the x Axis
-      d3.select('g.xAxis'+this.chartNumber)
+      d3.select("g.xAxis" + this.chartNumber)
         .attr("transform", "translate(0," + this.height + ")")
         .call(d3.axisBottom(scX));
 
       // add the y Axis
-      d3.select("g.yAxis"+this.chartNumber).call(
+      d3.select("g.yAxis" + this.chartNumber).call(
         d3
           .axisLeft(scY)
           .tickFormat(() => {
@@ -192,33 +202,23 @@ export default {
           })
           .tickSize(0)
       );
-      function handleClick(d,filter) {
-        if (vm.isSummary) {
-        var data = {
-          type: vm.data.type,
-          filter: filter.name
-        }
-         if (vm.data.filter.has(data.filter)) {
-           vm.$store.commit('summaryData/removeFilter',data)
-         }
-         else {
-            vm.$store.commit('summaryData/setFilter',data)
-         }
-        }
-
-      }
     },
 
+    
+
     changeFilter() {
-      const vm = this
-      d3.select("#" + this.id).select("g.bars" + this.chartNumber).selectAll("rect")
-                .style("fill", function(d) {
-          if (vm.data.filter.has(d.name)){
-                  return "var(--v-tertiary-base)"
+      const vm = this;
+      d3.select("#" + this.id)
+        .select("g.bars" + this.chartNumber)
+        .selectAll("rect")
+        .style("fill", function (d) {
+          if (isFiltered(d,vm)) {
+          return "var(--v-tertiary-base)"
           }
-           return "var(--v-primary-base)"
+          return "var(--v-primary-base)"
+
         })
-    }
+    },
   },
 };
 </script>

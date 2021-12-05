@@ -1,16 +1,20 @@
 <template>
   <v-card>
-        <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
+    <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 800 450"></svg>
   </v-card>
 </template>
 
 <script>
 import * as d3 from "d3";
-import ChartControls from '../components/ChartControls.vue';
+import ChartControls from "../components/ChartControls.vue";
+import {
+  handleFilterClick,
+  isFiltered,
+} from "../helperFunctions/graphHelperFunctions";
 
 export default {
-    components: { ChartControls },
+  components: { ChartControls },
 
   name: "PieChart",
   props: {
@@ -31,9 +35,8 @@ export default {
     },
     isSummary: {
       required: true,
-      type: Boolean
-    }
-
+      type: Boolean,
+    },
   },
 
   data: () => ({}),
@@ -42,8 +45,12 @@ export default {
     id() {
       return "chart" + this.chartNumber.toString();
     },
-    filterTracker() {
-      return this.data.tracker;
+    filterSet() {
+      return this.$store.getters["filterByType"](this.data.filterType);
+    },
+
+    negativeFilterSet() {
+      return this.$store.getters["negativeFilterByType"](this.data.filterType);
     },
     payload() {
       return this.data.payload;
@@ -51,14 +58,16 @@ export default {
   },
   watch: {
     payload: function () {
-      if (this.$store.getters.viewById(this.chartNumber).isFrozen){
-        return
+      if (this.$store.getters.viewById(this.chartNumber).isFrozen) {
+        return;
+      } else {
+        this.updateChart();
       }
-      else {
-      this.updateChart();
-      }    },
- 
-    filterTracker: function () {
+    },
+    filterSet: function () {
+      this.changeFilter();
+    },
+    negativeFilterSet: function () {
       this.changeFilter();
     },
   },
@@ -68,7 +77,6 @@ export default {
     this.updateChart();
   },
   methods: {
-
     createPieChart() {
       var svg = d3.select("#" + this.id).append("g");
       svg.append("g").attr("class", "slices" + this.chartNumber);
@@ -150,15 +158,17 @@ export default {
           this._current = d;
           return arc(d);
         })
-        .attr("opacity", function (d) {
-          if (vm.data.filter.size == 0 || !vm.data.filter.has(d)) {
+        .attr("opacity", function (d) { 
+          console.log(d.data)
+          if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
             return 1;
           } else {
-            return 0.4;
+            return 0.5;
           }
         })
-        .on("click", handleClick);
-
+        .on("click", function (d, filter) {
+          handleFilterClick(vm, filter.data);
+        });
       slice
         .transition()
         .duration(1000)
@@ -171,7 +181,7 @@ export default {
           };
         })
         .attr("opacity", function (d) {
-          if (vm.data.filter.size == 0 || !vm.data.filter.has(d)) {
+          if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
             return 1;
           } else {
             return 0.4;
@@ -196,13 +206,15 @@ export default {
         .enter()
         .append("text")
         .attr("dy", ".35em")
-        .attr("opacity", function(d) {
-          if (vm.data.filter.size == 0 || !vm.data.filter.has(d)) {
-                  return 1
+        .attr("opacity", function (d) {
+          if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
+            return 1;
           }
-           return 0.4
+          return 0.4;
         })
-        .on('click',handleClick)
+        .on("click", function (d, filter) {
+          handleFilterClick(vm, filter.data);
+        })
         .text(function (d) {
           return (
             d.data.name +
@@ -243,13 +255,14 @@ export default {
             d.data.percentage +
             " %"
           );
-        })        .attr("opacity", function(d) {
-          if (vm.data.filter.size == 0 || !vm.data.filter.has(d)) {
-                  return 1
-          }
-           return 0.4
         })
-        
+        .attr("opacity", function (d) {
+          if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
+            return 1;
+          }
+          return 0.4;
+        })
+
         .attrTween("transform", function (d, index) {
           var offset = 2;
           this._current = this._current || d;
@@ -352,20 +365,6 @@ export default {
 
       polyline.exit().remove();
 
-      function handleClick(d, filter) {
-        if (vm.isSummary) {
-        var data = {
-          type: vm.data.type,
-          filter: filter.data.name,
-        };
-        if (vm.data.filter.has(data.filter)) {
-          vm.$store.commit("summaryData/removeFilter", data);
-        } else {
-          vm.$store.commit("summaryData/setFilter", data);
-        }
-        }
-      }
-
       function checkCollisions(element, positions) {
         for (
           let index = 0;
@@ -395,29 +394,29 @@ export default {
         return false;
       }
     },
-      changeFilter() {
-    const vm = this
-    if (this.isSummary) {
-    d3.select('#'+this.id).select('g').select('g.slices'+ this.chartNumber).selectAll('path')
-        .attr("opacity", function(d) {
-          if (vm.data.filter.has(d.data.name) || vm.data.filter.size == 0 ){
-                  return 1
+    changeFilter() {
+      const vm = this;
+      d3.select("#" + this.id)
+        .select("g")
+        .select("g.slices" + this.chartNumber)
+        .selectAll("path")
+        .attr("opacity", function (d) {
+          if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
+            return 1;
           }
-           return 0.5
-        })
-    d3.select('#'+this.id).select('g').select('g.labels'+ this.chartNumber).selectAll('text')
-        .attr("opacity", function(d) {
-          if (vm.data.filter.has(d.data.name)  || vm.data.filter.size == 0){
-                  return 1
+          return 0.5;
+        });
+      d3.select("#" + this.id)
+        .select("g")
+        .select("g.labels" + this.chartNumber)
+        .selectAll("text")
+        .attr("opacity", function (d) {
+          if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
+            return 1;
           }
-           return 0.5
-        })
-  }
-  else {
-    console.log(this.data)
-  }
-      }
-
+          return 0.5;
+        });
+    },
   },
 };
 </script>

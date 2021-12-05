@@ -204,15 +204,13 @@ export default {
           );
       }
       function updateData(startTime, endTime) {
-        if (vm.isSummary) {
           vm.$store.commit("setStartTime", startTime);
           vm.$store.commit("setEndTime", endTime);
           vm.$store.dispatch("summaryData/updateData");
-          vm.$store.dispatch("detailData/getDataByTime");
+        //  vm.$store.dispatch("detailData/getDataByTime");
 
-        } else {
-          //direkt filtern
-        }
+      
+        
       }
     },
   },

@@ -23,7 +23,6 @@ created() {
     startTime = startTime.getTime()
     this.$store.commit('setStartTime',startTime)
     this.$store.commit('setEndTime',endTime)
-    this.$store.dispatch('summaryData/getSummaryDataByTime')
     
   })
 },
