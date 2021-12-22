@@ -9,7 +9,10 @@ export default new Vuetify({
         colors: ['primary', 'secondary'],
         lighten: 2,
         darken: 2,},
-    options: { customProperties: true },
+    options: { 
+      customProperties: true,
+
+     },
     themes: {
       light: {
         primary: "#BFD8D5",

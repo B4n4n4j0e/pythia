@@ -8,6 +8,13 @@ export function changeFilterTypeToLowerCaseOrUpperCase (filter){
     return filter
 }
 
+export function convertViewData(view) {
+    view.isFrozen = view.isFrozen === "True"
+    view.isSummary = view.isSummary === "True"
+    view.chartNumber =  parseInt(view.chartNumber)
+    view.cols =  parseInt(view.cols)
+}
+
 
 export function getDetailElementByChartType(state, type) {
     switch (type) {

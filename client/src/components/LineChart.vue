@@ -2,7 +2,10 @@
   <v-card>
     <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
     <svg :id="id" viewBox="0 0 960 450"></svg>
-
+        <v-progress-circular v-if="loading && !isFrozen"
+      indeterminate
+      color="success"
+    ></v-progress-circular> 
   </v-card>
 </template>
 
@@ -48,22 +51,25 @@ export default {
     payload() {
       return this.data.payload;
     },
+    loading(){
+      return this.data.loading
+    },
+    
+    isFrozen() {
+      return this.data.isFrozen
+    }
   },
   watch: {
     payload: function () {
+      if (this.isFrozen) {
+        return
+      }
       this.createLineChart();
     },
   },
 
   methods: {
 
-    test () {
-      this.$store.dispatch('detailData/getConnections') //.then(() => {this.createLineChart})
-//     this.$store.dispatch('detailData/getDNSConnections').then(() => {this.createLineChart})
-  //    this.$store.dispatch('detailData/getNotices').then(() => {this.createLineChart})
-  
-
-    },
     createLineChart() {
       var vm = this;
       d3.select("#" + this.id)
@@ -170,6 +176,9 @@ export default {
         idleTimeout = null;
       }
       function updateChart(event) {
+              if (this.isFrozen) {
+                return
+              }
         // What are the selected boundaries?
         var extent = event.selection;
         // If no selection, back to initial coordinate. Otherwise, update X axis domain
@@ -204,6 +213,9 @@ export default {
           );
       }
       function updateData(startTime, endTime) {
+              if (this.isFrozen) {
+                return
+              }
           vm.$store.commit("setStartTime", startTime);
           vm.$store.commit("setEndTime", endTime);
           vm.$store.dispatch("summaryData/updateData");

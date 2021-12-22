@@ -13,7 +13,7 @@
   <v-col cols="6">
     <FilterTable/> 
   </v-col>
-    <v-col v-for="(view,index) in views" v-bind:key="index" :cols="view.cols">
+    <v-col v-for="(view) in views" v-bind:key="view.chartNumber" :cols="view.cols">
       <component v-bind:isSummary="view.isSummary" v-bind:chartNumber="view.chartNumber" v-bind:data="view.isSummary ? $store.getters['summaryData/dataByType'](view.type):  $store.getters['detailData/dataByType'](view.type)" v-bind:is="view.view" > </component>
     </v-col>
 
@@ -74,7 +74,7 @@ export default {
       this.$store.commit("setEndTime", endTimestamp);
       this.$store.dispatch("summaryData/getDataByTime");
       this.$store.dispatch("detailData/getDataByTime");
-      
+
     },
   },
 };

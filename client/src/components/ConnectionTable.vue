@@ -40,7 +40,6 @@ export default {
   components: { ChartControls },
   data: () => ({
   
-    loading: true,
         headers: [
         {text: 'Timestamp', value: 'ts' },
         {text: 'Origin Host', value: 'source'},
@@ -56,6 +55,9 @@ export default {
         ],
   }),
     computed: {
+      loading(){
+      return this.data.loading
+    },
       options: {
         get() {
           return this.$store.state.detailData.connectionsTableOptions
@@ -80,9 +82,7 @@ export default {
 
   methods: {
     getDataFromApi() {
-      this.loading = true
       this.$store.dispatch("detailData/getConnections",this.options).then(() => {
-        this.loading = false
       })
 
     },

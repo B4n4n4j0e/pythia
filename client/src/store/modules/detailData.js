@@ -12,6 +12,7 @@ import TopKRespHostService from '../../services/RespHostTopKService';
 import PortsOfInterestService from '../../services/PortsOfInterestService';
 import {dispatchDetailViewByType, getDetailElementByChartType} from '../../helperFunctions/storeHelperFunctions'
 
+
 export default {
     namespaced: true,
     state: {
@@ -53,111 +54,124 @@ export default {
         totalNoticesCount:0,
 
         connectionTable: {
+            name: 'connectionTable',
             payload: [],
-            viewCounter: 0,
+            loading: false,
         },
 
         dNSTable: {
+            name: 'dNSTable',
             payload: [],
-            viewCounter: 0,
+            loading: false,
+
         },
 
         noticeTable: {
             payload: [],
-            viewCounter: 0,
+            name: 'noticeTable',
+            loading: false,
+
         },
 
         respHostsTopK:
         {
+            name: 'respHostsTopK',
             filterType: 'target',
             payload: [],
-            viewCounter: 0,
+            loading: false,
+
         },
 
         respPortsTopK:
         {
+            name: 'respPortsTopK',
             filterType: 'resp_p',
             payload: [],
-            viewCounter: 0,
+            loading: false,
+
         },
         originHostsTopK:
         {
+            name: 'originHostsTopK',
             filterType: 'source',
             payload: [],
-            viewCounter: 0,
+            loading: false,
+
         },
 
 
         dNSQueriesTopK:
         {
+            name: 'dNSQueriesTopK',
             filterType: 'query_text',
             payload: [],
-            viewCounter: 0,
+            loading: false,
+
         },
 
         portsOfInterest:
         {
+            name: 'portsOfInterest',
             filterType: 'resp_p',
             payload: [],
-            viewCounter: 0,
-
+            loading: false,
         },
 
         connectionSummary:
         {
+            name: 'connectionSummary',
             payload: [],
-            viewCounter: 0,
+            loading: false,
         },
 
         protocolSummary:
         {
-            filterType: 'proto',
+            name: 'protocolSummary',
             payload: [],
-            viewCounter: 0,
+            filterType: 'proto',
+            loading: false,
+
 
         },
 
         serviceSummary:
         {
+            name: 'serviceSummary',
             filterType: 'service',
             payload: [],
-            viewCounter: 0,
-
+            loading: false,
         },
 
         ipByteSummary:
         {
-            filterType: 'service',
+            name: 'ipByteSummary',
+            filterType: 'service', // needs to be changed
             payload: [],
-            viewCounter: 0,
-
+            loading: false,
         },
+
 
         ipByteSummaryByTime:
         {
+            name: 'ipByteSummaryByTime',
             payload: [],
-            viewCounter: 0,
+            loading: false,
+
         }
     },
 
     mutations: {
-
-        incrementViewCounter(state, view) {
-            view.viewCounter += 1;
-
+        deleteDataFromType(state,elem) {
+            elem.payload = [];
         },
 
-        decrementViewCounter(state, type) {
-            const view = getDetailElementByChartType(state, type)
-            if (view.viewCounter == 0) {
-                view.payload = []
-            }
-            view.viewCounter -= 1;
-        },
-
-        setConnections(state, newConnections) {
+        setConnectionsPayload(state, newConnections) {
             state.connectionTable.payload = newConnections;
         },
+        setConnectionsLoading(state, loading) {
+            state.connectionTable.loading = loading
+        },
+
         setTotalConnectionsCount(state, newConnectionsCount) {
             state.totalConnectionsCount = newConnectionsCount;
         },
@@ -176,325 +190,431 @@ export default {
         setDNSTableOptions(state, options) {
             state.dNSTableOptions = options
         },
-        setNodes(state, newNodes) {
-            state.nodes = newNodes;
-        },
-        setDNSConnections(state, newConnections) {
+
+        setDNSConnectionsPayload(state, newConnections) {
             state.dNSTable.payload= newConnections;
         },
 
-        setNotices(state, notices) {
+        setDNSConnectionsLoading(state, loading) {
+            state.dNSTable.loading = loading
+        },
+
+
+        setNoticesPayload(state, notices) {
             state.noticeTable.payload = notices;
+        },
+
+        setNoticesLoading(state, loading) {
+            state.noticeTable.loading = loading;
         },
 
         setRespHostsTopKPayload(state, newRespHostsTopK) {
             state.respHostsTopK.payload = newRespHostsTopK;
         },
+        setRespHostsTopKLoading(state, loading) {
+            state.respHostsTopK.loading = loading
+        },
+
         setPortsOfInterestPayload(state, newPortsOfInterest) {
             state.portsOfInterest.payload = newPortsOfInterest;
+        },
+
+        setPortsOfInterestLoading(state, loading) {
+            state.portsOfInterest.loading = loading
         },
 
         setRespPortsTopKPayload(state, newRespPortsTopK) {
             state.respPortsTopK.payload = newRespPortsTopK;
         },
 
+        setRespPortsTopKLoading(state, loading) {
+            state.respPortsTopK.loading = loading
+        },
+
         setOriginHostsTopKPayload(state, newTopKOriginHost) {
             state.originHostsTopK.payload = newTopKOriginHost;
         },
+
+        setOriginHostsTopKLoading(state, loading) {
+            state.originHostsTopK.loading = loading
+        },
+
         setDNSQueriesTopKPayload(state, newDNSQueriesTopK) {
             state.dNSQueriesTopK.payload = newDNSQueriesTopK;
         },
-
+        
+        setDNSQueriesTopKLoading(state, loading) {
+            state.dNSQueriesTopK.loading = loading
+        },
 
         setConnectionSummaryPayload(state, newSummary) {
             state.connectionSummary.payload = newSummary
         },
 
+        setConnectionSummaryLoading(state, loading) {
+            state.connectionSummary.loading = loading
+        },
+
+
         setProtocolSummaryPayload(state, newSummary) {
             state.protocolSummary.payload = newSummary
+        },
+        setProtocolSummaryLoading(state, loading) {
+            state.protocolSummary.loading = loading
         },
 
         setIPByteSummaryPayload(state, newSummary) {
             state.ipByteSummary.payload = newSummary
         },
 
+        setIPByteSummaryLoading(state, loading) {
+            state.ipByteSummary.loading = loading
+        },
+
         setIPByteSummaryByTimePayload(state, newSummary) {
             state.ipByteSummaryByTime.payload = newSummary
         },
-
-        setServiceSummaryPayload(state, newSummary) {
-            state.serviceSummary.payload = newSummary;
+        setIPByteSummaryByTimeLoading(state, loading) {
+            state.ipByteSummaryByTime.loading = loading
         },
 
-    
-    
-        
+        setServiceSummaryLoading(state, loading) {
+            state.serviceSummary.loading = loading;
+        },        
+        setServiceSummaryPayload(state, newSummary) {
+            state.serviceSummary.payload = newSummary;
+        },        
     },
+
     actions: {
+        getDataIfActivated(context, type) {
+            //gets data only if data is not already available
+            console.log(context.rootGetters['viewCountByViewDetail'](type))
+            if (context.rootGetters['viewCountByViewDetail'](type) == 1) {
+                dispatchDetailViewByType(context, type)
+            }
+        },
+
+        deleteDataIfNotActivated(context, type) {
+            //deletes payload if no other view is active with same payload
+            if (context.rootGetters['viewCountByViewDetail'](type) == 0) {
+                var elem = getDetailElementByChartType(context.state, type)
+                context.commit('deleteDataFromType', elem) 
+            }
+        },
+
         getConnections(context) {
             const filters = context.rootGetters['filterRequestParams']
             filters['table_options'] = context.state.connectionsTableOptions
+            context.commit('setConnectionsLoading', true);
             ConnectionsService.post(filters).then((response) => {
                 response.data.connections.forEach(d => {
                 d.ts = new Date(d.ts * 1000)})
-                context.commit('setConnections', response.data.connections);
+                context.commit('setConnectionsPayload', response.data.connections);
                 context.commit('setTotalConnectionsCount',response.data.total);
+                context.commit('setConnectionsLoading', false);
             }).catch(() => {
-                context.commit('setConnections', []);
+                context.commit('setConnectionsPayload', []);
+                context.commit('setConnectionsLoading', false);
             })
         },
 
         getDNSConnections(context) {
             const filters = context.rootGetters['filterRequestParams']
             filters['table_options'] = context.state.dNSTableOptions
+            context.commit('setDNSConnectionsLoading',true);
+
             DNSConnectionService.post(filters).then((response) => {
                 response.data.dNSConnections.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
                 });
-                context.commit('setDNSConnections', response.data.dNSConnections);
-
+                context.commit('setDNSConnectionsPayload', response.data.dNSConnections);
+                context.commit('setDNSConnectionsLoading',false);
                 context.commit('setTotalDNSCount', response.data.total);
             }).catch(() => {
-                context.commit('setDNSConnections', []);
+                context.commit('setDNSConnectionsPayload', []);
+                context.commit('setDNSConnectionsLoading',false);
             })
         },
 
         getNotices(context) {
             const filters = context.rootGetters['filterRequestParams']
             filters['table_options'] = context.state.noticesTableOptions
+            context.commit('setNoticesLoading', true);
             NoticeService.post(filters).then((response) => {
                 response.data.notices.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
                 });
+                context.commit('setNoticesPayload', response.data.notices)
                 context.commit('setTotalNoticesCount',response.data.total);
-                context.commit('setNotices', response.data.notices)
+                context.commit('setNoticesLoading', false);
+
             }).catch(() => {
-                context.commit('setNotices', []);
+                context.commit('setNoticesPayload', []);
                 context.commit('setTotalNoticesCount',0);
-
-
+                context.commit('setNoticesLoading', false);
             })
         },
+      
 
         getServiceSummary(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setServiceSummaryLoading', true);
             ServiceSumService.post(filters).then((response) => {
                 response.data.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
                 });
                 context.commit('setServiceSummaryPayload', response.data);
+                context.commit('setServiceSummaryLoading', false);
             }).catch(() => {
                 context.commit('setServiceSummaryPayload', []);
+                context.commit('setServiceSummaryLoading', false);
+
             })
         },
 
         getProtocolSummary(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setProtocolSummaryLoading',true);
             ProtocolSumService.post(filters).then((response) => {
                 response.data.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
                 });
                 context.commit('setProtocolSummaryPayload', response.data);
+                context.commit('setProtocolSummaryLoading',false);
+
             }).catch(() => {
                 context.commit('setProtocolSummaryPayload', []);
+                context.commit('setProtocolSummaryLoading',false);
+
             })
         },
 
         getConnectionSummary(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setConnectionSummaryLoading',true);
+
             ConnectionSumService.post(filters).then((response) => {
                 response.data.forEach(d => {
                 d.ts = new Date(d.ts * 1000)})
                 context.commit('setConnectionSummaryPayload', response.data);
+                context.commit('setConnectionSummaryLoading',false);
+
             }).catch(() => {
                 context.commit('setConnectionSummaryPayload', []);
+                context.commit('setConnectionSummaryLoading',false);
             })
         },
 
         getIPByteSummaryByTime(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setIPByteSummaryByTimeLoading', true);
+
              IPByteSummaryService.postByTime(filters).then((response) => {
                 response.data.forEach(d => {
                     d.ts = new Date(d.ts * 1000)
                 });
                 context.commit('setIPByteSummaryByTimePayload', response.data);
+                context.commit('setIPByteSummaryByTimeLoading', false);
+
             }).catch(() => {
                 context.commit('setIPByteSummaryByTimePayload', []);
+                context.commit('setIPByteSummaryByTimeLoading', false);
             })
         },
         getIPByteSummary(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setIPByteSummaryLoading', true);
 
              IPByteSummaryService.post(filters).then((response) => {
-            
+                context.commit('setIPByteSummaryLoading', false);
                 context.commit('setIPByteSummaryPayload', response.data);
             }).catch(() => {
+                context.commit('setIPByteSummaryLoading', false);
                 context.commit('setIPByteSummaryPayload', []);
             })
         },
 
         getDNSQueriesTopK(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setDNSQueriesTopKLoading', true);
+
             DNSQueryTopKService.post(filters).then((response) => {
                 context.commit('setDNSQueriesTopKPayload', response.data);
+                context.commit('setDNSQueriesTopKLoading', false);
+
             }).catch(() => {
                 context.commit('setDNSQueriesTopKPayload', []);
+                context.commit('setDNSQueriesTopKLoading', false);
             })
         },
 
         getOriginHostsTopK(context) {
+            context.commit('setOriginHostsTopKLoading', true);
             const filters = context.rootGetters['filterRequestParams']
             OriginHostTopKService.post(filters).then((response) => {
                 context.commit('setOriginHostsTopKPayload', response.data);
+                context.commit('setOriginHostsTopKLoading', false);
+
             }).catch(() => {
                 context.commit('setOriginHostsTopKPayload', []);
+                context.commit('setOriginHostsTopKLoading', false);
+
             })
         },
 
         getRespHostsTopK(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setRespHostsTopKLoading', true);
             TopKRespHostService.post(filters).then((response) => {
                 context.commit('setRespHostsTopKPayload', response.data);
+                context.commit('setRespHostsTopKLoading', false);
+
             }).catch(() => {
                 context.commit('setRespHostsTopKPayload', []);
+                context.commit('setRespHostsTopKLoading', false);
             })
         },
         getRespPortsTopK(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setRespPortsTopKLoading', true);
+
             RespPortTopKService.post(filters).then((response) => {
                 context.commit('setRespPortsTopKPayload', response.data);
+                context.commit('setRespPortsTopKLoading', false);
             }).catch(() => {
                 context.commit('setRespPortsTopKPayload', []);
+                context.commit('setRespPortsTopKLoading', false);
             })
         },
 
         getPortsOfInterest(context) {
             const filters = context.rootGetters['filterRequestParams']
+            context.commit('setPortsOfInterestLoading', true);
+
             PortsOfInterestService.post(filters).then((response) => {
                 context.commit('setPortsOfInterestPayload', response.data);
+                context.commit('setPortsOfInterestLoading', false);
+
             }).catch(() => {
                 context.commit('setPortsOfInterestPayload', []);
+                context.commit('setPortsOfInterestLoading', false);
+
             })
         },
 
         getDataByTime(context) {
-
-            if (context.state.ipByteSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.ipByteSummary.name) > 0) {
                 context.dispatch('getIPByteSummary')
             }
-            if (context.state.ipByteSummaryByTime.viewCounter > 0) {
+            if (context.rootGetters['viewCountByViewDetail'](context.state.ipByteSummaryByTime.name) > 0) {
                 context.dispatch('getIPByteSummaryByTime')
             }
-            if (context.state.serviceSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.serviceSummary.name) > 0) {
                 context.dispatch('getServiceSummary');
             }
-            if (context.state.protocolSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.protocolSummary.name) > 0) {
                 context.dispatch('getProtocolSummary');
             }
-            if (context.state.connectionSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.connectionSummary.name) > 0) {
                 context.dispatch('getConnectionSummary');
             }
-            if (context.state.dNSQueriesTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.dNSQueriesTopK.name) > 0) {
                 context.dispatch('getDNSQueriesTopK');
             }
-            if (context.state.originHostsTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.originHostsTopK.name) > 0) {
                 context.dispatch('getOriginHostsTopK');
             }    
-            if (context.state.respHostsTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.respHostsTopK.name) > 0) {
                 context.dispatch('getRespHostsTopK');
             }
-            if (context.state.respPortsTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.respPortsTopK.name) > 0) {
                 context.dispatch('getRespPortsTopK');
             }
-            if (context.state.portsOfInterest.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.portsOfInterest.name) > 0) {
                 context.dispatch('getPortsOfInterest');
             }       
-            if (context.state.dNSTable.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.dNSTable.name) > 0) {
                 context.dispatch('getDNSConnections');
             }
-            if (context.state.connectionTable.viewCounter > 0) {
-               context.dispatch('getConnections'); 
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.connectionTable.name) > 0) {
+                context.dispatch('getConnections'); 
             }          
-            if (context.state.noticeTable.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.noticeTable.name) > 0) {
                 context.dispatch('getNotices');
             }                              
-                             
-            if (context.state.connectionViewCounter > 0) {
-                context.dispatch('getConnections')
-            }
-
-    
-            if (context.state.connectionSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.connectionSummary.name) > 0) {
                 context.dispatch('getConnectionSummary')
             }
-            if (context.state.ipByteSummaryByTime.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.ipByteSummaryByTime.name) > 0) {
                 context.dispatch('getIPByteSummaryByTime')
             }
             context.dispatch('updateData')
-
         },
 
         updateData(context) {
-            if (context.state.serviceSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.serviceSummary.name) > 0) {
                 context.dispatch('getServiceSummary')
             }
-
-            if (context.state.respHostsTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.respHostsTopK.name) > 0) {
                 context.dispatch('getRespHostsTopK')
             }
-            if (context.state.respPortsTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.respPortsTopK.name) > 0) {
                 context.dispatch('getRespPortsTopK')
             }
-            if (context.state.originHostsTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.originHostsTopK.name) > 0) {
                 context.dispatch('getOriginHostsTopK')
             }
-
-            if (context.state.protocolSummary.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.protocolSummary.name) > 0) {
                 context.dispatch('getProtocolSummary')
             }
-            if (context.state.dNSQueriesTopK.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.dNSQueriesTopK.name) > 0) {
                 context.dispatch('getDNSQueriesTopK')
             }
-            if (context.state.portsOfInterest.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.portsOfInterest.name) > 0) {
                 context.dispatch('getPortsOfInterest')
             }
 
-            if (context.state.ipByteSummary.viewCounter > 0) {
+            if (context.rootGetters['viewCountByViewDetail'](context.state.ipByteSummary.name) > 0) {
                 context.dispatch('getIPByteSummary')
             }
-            if (context.state.connectionTable.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.connectionTable.name) > 0) {
                 context.dispatch('getConnections');
             }          
-            if (context.state.noticeTable.viewCounter > 0) {
+            
+            if (context.rootGetters['viewCountByViewDetail'](context.state.noticeTable.name) > 0) {
                 context.dispatch('getNotices');
             }                              
                        
-
         },
-
-        incrementViewCounter(context, type) {
-            const view = getDetailElementByChartType(context.state, type)
-            if (view.viewCounter == 0) {
-                dispatchDetailViewByType(context,type)
-            }
-            context.commit('incrementViewCounter', view)
-        },
-        decrementViewCounter(context, type) {
-            context.commit('decrementViewCounter', type)
-        },
-    
     },
     getters: {
         dataByType: (state) => (type) => {
             var data = getDetailElementByChartType(state, type)
             return data
 
-        },
-
-        connectionViewCounter: state => {
-            return state.ipByteSummaryByTime.viewCounter + state.ipByteSummary.viewCounter + state.serviceSummary.viewCounter +
-                state.protocolSummary.viewCounter + state.connectionSummary.viewCounter
-                + state.portsOfInterest.viewCounter + state.originHostsTopK.viewCounter + state.respHostsTopK.viewCounter + state.respPortsTopK.viewCounter
         },
 
         connectionsPerMinute: state => {

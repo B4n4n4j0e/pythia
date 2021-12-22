@@ -5,6 +5,10 @@
       v-bind:chartNumber="chartNumber"
       class="mb-0"
     />
+    <v-progress-circular v-if="loading && !isFrozen"
+      indeterminate
+      color="primary"
+    ></v-progress-circular> 
     <svg :id="id" viewBox="0 0 660 500"></svg>
   </v-card>
 </template>
@@ -55,6 +59,13 @@ export default {
     payload() {
       return this.data.payload;
     },
+        loading(){
+      return this.data.loading
+    },
+    
+    isFrozen() {
+      return this.data.isFrozen
+    }
   },
   watch: {
     payload: function () {
@@ -180,7 +191,7 @@ export default {
         .text((d) => d.name)
         .call((text) =>
           text
-            .filter((d) => scX(d.value) - scX(0) < 250) // short bars
+            .filter((d) => scY(d.value) - scY(0) > 250) // short bars
             .attr("x", (d) => scX(d.value))
             .attr("dx", +4)
             .attr("text-anchor", "start")

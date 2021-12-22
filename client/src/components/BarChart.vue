@@ -1,6 +1,11 @@
 <template>
   <v-card>
+    
     <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
+      <v-progress-circular v-if="loading && !isFrozen"
+      indeterminate
+      color="success"
+    ></v-progress-circular> 
     <svg :id="id" viewBox="0 0 300 300"></svg>
   </v-card>
 </template>
@@ -55,16 +60,34 @@ export default {
     payload() {
       return this.data.payload;
     },
+
+    loading(){
+      return this.data.loading
+    },
+    
+    isFrozen() {
+      return this.data.isFrozen
+    }
   },
 
   watch: {
     payload: function () {
-      if (this.$store.getters.viewById(this.chartNumber).isFrozen) {
+      if (this.isFrozen) {
         return;
       } else {
         this.updateChart();
       }
     },
+
+    isFrozen() {
+      if (this.isFrozen){
+        return
+      }
+      else {
+        this.updateChart();
+      }
+    },
+
       filterSet: function () {
       this.changeFilter();
     },
@@ -90,6 +113,13 @@ export default {
         .select("g.axis" + this.chartNumber)
         .append("g")
         .attr("class", "xAxis" + this.chartNumber);
+           svg
+        .append("g")
+        .attr("class", "text" + this.chartNumber)
+        .attr("fill", "white")
+        .attr("text-anchor", "start")
+        .attr("font-family", "sans-serif")
+        .attr("font-size", 9);
     },
     updateChart() {
       const vm = this;
@@ -117,20 +147,13 @@ export default {
 
       var barWidth = (this.width - 90) / this.payload.length;
 
-      var xAxis = d3.axisBottom(scX);
-      var yAxis = d3.axisLeft(scY);
+      var xAxis = d3.axisBottom(scX).tickFormat(() => {return "";}).tickSize(0);
+      var yAxis = d3.axisLeft(scY)
 
       d3.select("g.yAxis" + this.chartNumber).call(yAxis);
 
       d3.select("g.xAxis" + this.chartNumber)
         .call(xAxis)
-        .selectAll("text")
-        .style("text-anchor", "end")
-        .attr("dx", "-.8em")
-        .attr("dy", ".15em")
-        .attr("transform", function () {
-          return "rotate(-65)";
-        });
 
       var bars = d3
         .select("g.bars" + this.chartNumber)
@@ -183,6 +206,33 @@ export default {
         });
 
       bars.exit().remove();
+
+
+   var text = d3
+        .select("g.text" + this.chartNumber)
+        .selectAll("text")
+        .data(this.payload);
+      text.enter();
+      text
+        .join("text")
+        .attr("x", 0)
+        .attr("y",(d) => {
+          return scX(d.name) + scX.bandwidth() /3}
+          )
+        .attr("dy", "0.35em")
+        .attr("dx", +4)
+        .style("fill", "var(--v-text-base)")
+        .attr('transform', 'rotate(270)')
+        .text((d) => d.name)
+        .call((text) =>
+          text
+            .filter((d) => scY(d.value) > -100) // short bars
+            .attr("x", (d) =>  -scY(d.value))
+            .attr("dx", +4)
+            .attr("text-anchor", "start")
+        );
+
+      text.exit().remove();
 
     },
 

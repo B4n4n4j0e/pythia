@@ -19,7 +19,27 @@
       type="file"
       @change="onFileInput"
     />
+   <v-menu top :close-on-content-click="false" v-model="dialog">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn text v-bind="attrs" v-on="on">Dashboard options </v-btn>
+      </template>
 
+      <v-list nav flat>
+        <v-list-item tile v-for="(item, index) in dashboards" :key="index">
+          <v-btn :class="currentDashboard == item.name ? 'dashboardTextButtonActive': 'dashboardTextButtonInactive' " @click="switchDashboard(item.name)" text>{{ item.name }}</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn @click="removeDashboard(item.name)" text color="error">X</v-btn>
+        </v-list-item>
+        <v-list-item>
+          <v-text-field
+            class="mr-2"
+            v-model="dashboardName"
+            label="Add new dashboard"
+          ></v-text-field>
+          <v-btn @click="addDashboard" class="ml-3" color="success">+</v-btn>
+        </v-list-item>
+      </v-list>
+    </v-menu>
     <v-spacer></v-spacer>
     <v-btn @click="darkmode" icon>
       <v-icon large>mdi-theme-light-dark </v-icon>
@@ -32,14 +52,48 @@ import PCAPUploadService from "../services/PCAPUploadService";
 
 export default {
   data: () => ({
+    dialog: false,
     isSelecting: false,
     selectedFile: null,
+    dashboardName: ""
   }),
-  computed: {},
+  
+  computed: {
+    dashboards() {
+      return this.$store.state.dashboards
+    },
+    currentDashboard() {
+      return this.$store.state.currentDashboard
+    }
+  },
 
   methods: {
+    addDashboard(){
+      if (this.dashboardName == "") {
+        return 
+      }
+      var dashboardDuplicates = this.dashboards.filter(elem => elem.name== this.dashboardName)
+      if (dashboardDuplicates.length> 0){
+        this.$store.commit('setSnackbarMessage', "Name already exists, please choose another name")
+        this.$store.commit('setSnackbar',true)
+      }
+      else {
+        this.$store.dispatch('addDashboard',this.dashboardName)
+        this.dashboardName=""
+      }
+    },
+    removeDashboard(name) {
+        this.$store.dispatch('removeDashboard',name)
+
+    },
+    switchDashboard(name) {
+        this.$store.dispatch('switchDashboard', name)
+        this.dialog=false
+    },
+
     darkmode() {
       this.$vuetify.theme.dark = !this.$vuetify.theme.dark;
+      localStorage.setItem("dark_theme", this.$vuetify.theme.dark.toString());
     },
     uploadPCAP() {
       this.isSelecting = true;
@@ -66,5 +120,12 @@ export default {
 <style scoped>
 >>> .v-text-field {
   width: 110px;
+}
+.dashboardTextButtonActive {
+    text-transform: none;
+}
+.dashboardTextButtonInactive {
+    text-transform: none;
+    opacity: 0.5;
 }
 </style>

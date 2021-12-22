@@ -53,8 +53,6 @@ connections_resource_fields = {
 }
 
 
-
-
 notice_resource_fields = {
     'ts': fields.Float,
     'notice_uid': fields.String,
@@ -120,6 +118,61 @@ status_resource_fields = {
     'host': fields.String,
     'status': fields.String,
 }
+
+config_resource_fields = {
+    'pcap_path': fields.String,
+    'pcap_summary': fields.String,
+    'pcap_detail': fields.String,
+    'sensor_path': fields.String,
+    'sensor_summary': fields.String,
+    'sensor_detail': fields.String,
+    'network_scan_detection': fields.String,
+    'dns_tunneling_detection': fields.String
+    }
+
+
+connections_resource_fields = {
+    'connections': fields.Nested(connection_resource_fields),
+    'total': fields.Integer
+}
+
+view_resource_fields = {
+    'view': fields.String(attribute='view'),
+    'type': fields.String(attribute="view_type"),
+    'dataLabel': fields.String(attribute="data_label"),
+    'viewLabel': fields.String(attribute="view_label"),
+    'chartNumber': fields.String(attribute="id"),
+    'cols': fields.String(attribute="cols"),
+    'isFrozen': fields.String(attribute="is_frozen"),
+    'isSummary': fields.String(attribute="is_summary"),
+}
+
+
+dashboard_resource_fields = {
+    'name': fields.String,
+    'views': fields.List(fields.Nested(view_resource_fields),attribute='view')
+}
+
+dashboards_name_resource_fields = {
+    'name': fields.String,
+}
+
+
+
+
+view_parser = reqparse.RequestParser()
+view_parser.add_argument('view', type=str, required=True)
+view_parser.add_argument('view_type', type=str, required=True)
+view_parser.add_argument('data_label', type=str, required=True)
+view_parser.add_argument('view_label', type=str, required=True)
+view_parser.add_argument('id', type=int)
+view_parser.add_argument('cols', type=int, required=True)
+view_parser.add_argument('is_frozen', type=bool, required=True)
+view_parser.add_argument('is_summary', type=bool, required=True)
+view_parser.add_argument('dashboard_name',type=str, required=True)
+
+dashboard_parser = reqparse.RequestParser()
+dashboard_parser.add_argument('name',type=str,required=True)
 
 parser = reqparse.RequestParser()
 parser.add_argument('filters', type=dict)
@@ -191,7 +244,6 @@ def allowed_file(filename):
 
 class PCAPFileUpload(Resource):
     def post(self):
-        print(request.files)
         if 'file' not in request.files:
            #Error no File
             abort(404, message='File not in attachment')
@@ -204,7 +256,7 @@ class PCAPFileUpload(Resource):
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(current_app.config["UPLOAD_FOLDER"], filename))
-            return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+            return success_message()
 
 api.add_resource(PCAPFileUpload, '/pcap-upload')
 
@@ -396,13 +448,15 @@ class ServiceSum(Resource):
     def get(self):
         query = create_top_k_summary_query([],request.args,ServiceSumModel)
         return query.limit(10).all()
-    @marshal_with(service_sum_resource_fields)
+    @marshal_with(default_top_k_fields)
     def post(self):
         args = parser.parse_args()
         query = create_top_k_detail_query(ConnectionModel,args,ConnectionModel.service) 
         return query.all()
 
+api.add_resource(ServiceSum, '/service-sum')
 
+## Time Filter not working :/
 class IPByteSum(Resource):
     @marshal_with(default_top_k_fields)
     def get(self):
@@ -466,7 +520,6 @@ api.add_resource(ConnectionSummary, '/connection-summary')
 class ZeekStatus(Resource):
     @marshal_with(status_resource_fields)
     def get(self):
-        '''
         try:
             result = subprocess.run(['/usr/local/zeek/bin/zeekctl','status'],stdout=subprocess.PIPE)
         except FileNotFoundError:
@@ -474,18 +527,117 @@ class ZeekStatus(Resource):
         output = result.stdout.decode('utf-8')
         lines = re.split(r'\n+',output)
         result = []
-        for line in lines[1:len(lines-1)]:
+        for line in lines[1:len(lines)-1]:
             line = re.split(r'\s+',line)
             result.append(StatusEntry(line[0],line[1],line[2],line[3]))
         return result
-'''
-        entry1 = StatusEntry('manager', 'manager', 'localhost', 'running')
-        entry2 = StatusEntry('proxy', 'proxy', 'localhost', 'running')
-        entry3 = StatusEntry('worker-1', 'worker', 'localhost', 'running')
-        return [entry1, entry2, entry3]
-
 
 api.add_resource(ZeekStatus, '/zeek-status')
+
+"""
+class Configuration(Resource):
+    @marshal_with(config_resource_fields)
+    def get(self):
+        base_path = os.path.dirname(__file__)
+        file_path = os.path.abspath(os.path.join(base_path, "..", "config.file"))
+        config_exists = os.path.exists(file_path)
+        
+        if config_exists:
+            with open(file_path,'r') as config_file:
+                rows = ( line.split('\t') for line in config_file)
+                header = next(rows)
+                if header[0] != "#fields" and header[1] !="key" and header[2] != "value" or len(header) > 3:
+                    abort(500, message="wrong config format" )
+                result = { row[0]:row[1].replace('\n','').replace('') for row in rows if len(row) == 2  }
+        else:
+            create_config_file()
+        return result 
+api.add_resource(Configuration, '/configuration')
+
+"""
+class Configuration(Resource):
+    def get(self):
+        pcap_path = os.environ["PYTHIA_PCAP_PATH"]
+        sensor_path = os.environ["PYTHIA_SENSOR_PATH"]
+        scripts = os.environ['PYTHIA_SCRIPTS']
+api.add_resource(Configuration, '/configuration')
+
+
+class View(Resource):
+    @marshal_with(view_resource_fields)
+    def post(self): # Create View
+        args = view_parser.parse_args()
+        view = ViewModel(view=args['view'], view_type=args['view_type'], data_label=args['data_label'],
+         view_label=args['view_label'],cols=args['cols'],is_frozen=args['is_frozen'], 
+         is_summary=args['is_summary'],dashboard_name=args["dashboard_name"])
+        p = db.session.query(DashboardModel).get(args['dashboard_name'])
+        p.view.append(view)
+        db.session.commit()
+        return view
+    def delete(self): #Delete View
+        print(request.args)
+        id = request.args.get('id')
+        ViewModel.query.filter(ViewModel.id==id).delete()
+        db.session.commit()
+        return success_message()
+    
+    @marshal_with(view_resource_fields)
+    def put(self): #Change config of view
+        args = view_parser.parse_args()
+        view_to_update = ViewModel.query.get(args['id'])
+        if view_to_update.view != args['view']:
+            view_to_update.view = args['view']
+        if view_to_update.view_type != args['view_type']:
+            view_to_update.view_type = args['view_type']
+        if view_to_update.data_label != args['data_label']:
+            view_to_update.data_label = args['data_label']
+        if view_to_update.view_label != args['view_label']:
+            view_to_update.view_label = args['view_label']
+        if view_to_update.cols != args['cols']:
+            view_to_update.cols = args['cols']
+        if view_to_update.is_summary != args['is_summary']:
+            view_to_update.is_summary = args['is_summary']
+        if view_to_update.is_frozen != args['is_frozen']:
+            view_to_update.is_frozen = args['is_frozen']
+        db.session.commit()
+        return view_to_update
+api.add_resource(View, '/view')
+
+
+class Dashboard(Resource):
+    @marshal_with(dashboard_resource_fields)
+    def get(self): # Send Dashboard with viewws
+        args = dashboard_parser.parse_args()
+        result = DashboardModel.query.get(args['name'])
+        return result
+    
+    @marshal_with(dashboards_name_resource_fields)
+    def post(self): # Create Dashboard Delete Cascade einstellen. 
+        args = dashboard_parser.parse_args()
+        dashboard = DashboardModel(name=args['name'])
+        db.session.add(dashboard)
+        db.session.commit()
+        return dashboard
+    
+    def delete(self): # Delete Cascade
+        args = dashboard_parser.parse_args()
+        dashboard = DashboardModel.query.get(args['name'])
+        db.session.delete(dashboard)
+        db.session.commit()
+        return success_message()
+api.add_resource(Dashboard, '/dashboard')
+
+class Dashboards(Resource):
+    @marshal_with(dashboards_name_resource_fields)
+    def get(self):   
+        result =  DashboardModel.query.all()
+        if len(result) == 0:
+            dashboard = DashboardModel(name='default')
+            db.session.add(dashboard)
+            db.session.commit()
+            result.append(dashboard)  
+        return result 
+api.add_resource(Dashboards, '/dashboards')
 
 def create_filter_port_conditions(queries,args):
     if args['resp_p'] != None:
@@ -803,3 +955,6 @@ def add_ports_of_interest_to_filter(filters):
     else:
         filters['resp_p'] = PORTS_OF_INTEREST    
     return filters
+
+def success_message():
+    return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 

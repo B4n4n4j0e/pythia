@@ -148,8 +148,6 @@ export default {
         return;
       } else {
         this.$store.commit("setDialog", false);
-
-
         if (this.$store.state.dialogIsSummary) {
           this.selectedDataType = "Summary Data";
         } else {
@@ -185,6 +183,9 @@ export default {
 
 
     saveView() {
+      if (this.selectedDataType =="" || this.selectedView == "" ||   this.selectedData == "") {
+        return
+      }
       var summary
       if (this.selectedDataType == 'Summary Data'){
         summary = true
@@ -201,11 +202,14 @@ export default {
         isSummary: summary,
         isFrozen: false
       };
-      this.$store.dispatch("addViewAndIncrementViewCounter", viewData);
+      this.$store.dispatch("addView", viewData);
       this.closeDialog();
     },
 
     updateView() {
+       if (this.selectedDataType =="" || this.selectedView == "" ||   this.selectedData == "") {
+        return
+      }
       var summary
       if (this.selectedDataType == 'Summary Data'){
         summary = true
@@ -214,15 +218,16 @@ export default {
         summary = false 
       }
       var viewData = {
+        id: this.$store.state.dialogChartNumber,
         view: viewDataToChartName(this.selectedView),
         type: typeDataToStoreTypeData(this.selectedData),
         dataLabel: this.selectedData,
         viewLabel: this.selectedView,
         cols: this.windowWidth,
         isSummary: summary,
-
+        isFrozen: this.$store.state.dialogIsFrozen
       };
-      this.$store.dispatch("updateViewAndCounter", viewData);
+      this.$store.dispatch("updateView", viewData);
       this.closeDialog();
     },
 

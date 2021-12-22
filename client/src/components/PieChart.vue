@@ -1,8 +1,14 @@
 <template>
   <v-card>
     <ChartControls v-bind:chartNumber="chartNumber" class="mb-0" />
+        <v-progress-circular v-if="loading && !isFrozen"
+      indeterminate
+      color="success"
+    ></v-progress-circular>          
+    <div class="tooltip" :id="tooltipId">"></div>
     <svg :id="id" viewBox="0 0 800 450"></svg>
   </v-card>
+
 </template>
 
 <script>
@@ -39,12 +45,18 @@ export default {
     },
   },
 
-  data: () => ({}),
+  data: () => ({
+  }),
 
   computed: {
     id() {
       return "chart" + this.chartNumber.toString();
     },
+
+    tooltipId() {
+      return "tooltip" + this.chartNumber.toString();
+    },
+
     filterSet() {
       return this.$store.getters["filterByType"](this.data.filterType);
     },
@@ -55,15 +67,33 @@ export default {
     payload() {
       return this.data.payload;
     },
+    loading(){
+      return this.data.loading
+    },
+    
+    isFrozen() {
+      return this.data.isFrozen
+    }
+
   },
   watch: {
     payload: function () {
-      if (this.$store.getters.viewById(this.chartNumber).isFrozen) {
+      if (this.isFrozen) {
         return;
       } else {
         this.updateChart();
       }
     },
+
+    isFrozen() {
+      if (this.isFrozen){
+        return
+      }
+      else {
+        this.updateChart();
+      }
+    },
+    
     filterSet: function () {
       this.changeFilter();
     },
@@ -77,6 +107,7 @@ export default {
     this.updateChart();
   },
   methods: {
+
     createPieChart() {
       var svg = d3.select("#" + this.id).append("g");
       svg.append("g").attr("class", "slices" + this.chartNumber);
@@ -90,6 +121,7 @@ export default {
     },
 
     updateChart() {
+      let tooltip = d3.select('#' + this.tooltipId)
       const vm = this;
       var radius = Math.min(this.width, this.height) / 2;
       var svg = d3.select("#" + this.id);
@@ -159,7 +191,6 @@ export default {
           return arc(d);
         })
         .attr("opacity", function (d) { 
-          console.log(d.data)
           if ((vm.filterSet.size==0 & vm.negativeFilterSet.size==0) | isFiltered(d.data, vm)) {
             return 1;
           } else {
@@ -168,7 +199,25 @@ export default {
         })
         .on("click", function (d, filter) {
           handleFilterClick(vm, filter.data);
-        });
+        })
+        .on("mouseover", function(event,d) {	
+         var [x,y] = d3.pointer(event,svg.node())
+        var svgDim = svg.node().getBoundingClientRect();
+
+        var left= svgDim.width/vm.width * x
+        var top = svgDim.height/vm.height * y
+              let value = d.data.packetCount.toString().replace(/\B(?=(d{3})+(?!\d))/g,",")
+            tooltip.transition()		
+                .duration(1000)		
+          .style('opacity', 0.8)
+            tooltip	.html('<p class="subtitle-2 white--text">' + d.data.name + ' | ' + value + ' | ' +d.data.percentage + ' %</p>')	
+                .style("left", left + 'px')
+                .style("top",top   + 'px')
+            })  .on("mouseout", function() {
+            tooltip.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        })					
       slice
         .transition()
         .duration(1000)
@@ -249,9 +298,9 @@ export default {
           this._current = this._current || d;
           return (
             d.data.name +
-            " / " +
+            " | " +
             d.data.packetCount +
-            " / " +
+            " | " +
             d.data.percentage +
             " %"
           );
@@ -432,4 +481,6 @@ export default {
 >>> path.slice {
   stroke-width: 300px;
 }
+
 </style>
+

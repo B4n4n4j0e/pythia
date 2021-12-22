@@ -2,7 +2,10 @@ import Vue from 'vue'
 import Vuex from 'vuex';
 import summaryData from './modules/summaryData'
 import detailData from './modules/detailData'
-import {changeFilterTypeToLowerCaseOrUpperCase} from '../helperFunctions/storeHelperFunctions'
+import {changeFilterTypeToLowerCaseOrUpperCase, convertViewData} from '../helperFunctions/storeHelperFunctions'
+import DashboardService from '../services/DashboardService'
+import ViewService from '../services/ViewService'
+
 Vue.use(Vuex);
 
 export default new Vuex.Store({
@@ -16,11 +19,20 @@ export default new Vuex.Store({
         //dialogData
         dialog: false,
         dialogIsSummary: false,
+        dialogIsFrozen: false,
         dialogDataLabel: "",
         dialogViewLabel: "",
         dialogCols: "",
         dialogChartNumber: "",
-
+        
+        //dashboarddata
+        dashboards: [],
+        currentDashboard: "",
+        
+        //snackbar data
+        snackbar: false,
+        snackbarMessage: "",
+        
         filters:
         {
             tracker: 0,
@@ -41,21 +53,7 @@ export default new Vuex.Store({
         },
         
 
-        nodes: [],
-        views: [
-            {
-                view: 'BarChartHorizontal',
-                type: 'respHostsTopK',
-                dataLabel: "Resp hosts top k",
-                viewLabel: 'Bar chart horizontal',
-                chartNumber: 30,
-                cols: 6,
-                isFrozen: false,
-                isSummary: true
-
-            }
-        ],
-        chartNumberCounter: 0,
+        views: [],
         connectionPortsOfInterest: ["10/tcp", "21/tcp", "22/tcp", "23/tcp", "25/tcp", "80/tcp", "110/tcp", "139/tcp", "443/tcp", "445/tcp", "3389/tcp", "10/udp", "53/udp",
             "67/udp", "123/udp", "135/udp", "137/udp", "138/udp", "161/udp", "445/udp", "631/udp", "1434/udp"],
         startTime: null,
@@ -64,10 +62,6 @@ export default new Vuex.Store({
     },
     mutations: {
 
-
-        incrementChartNumberCounter(state) {
-            state.chartNumberCounter += 1
-        },
 
         addFilter(state, filter) {
             filter = changeFilterTypeToLowerCaseOrUpperCase(filter)
@@ -113,18 +107,22 @@ export default new Vuex.Store({
         },
 
         removeView(state, id) {
-            state.views = state.views.filter(el => el.chartNumber != id)
+            for( var i = 0; i < state.views.length; i++){ 
+    
+                if (state.views[i].chartNumber === id) { 
+                    state.views.splice(i, 1); 
+                }
+            }
         },
 
         addView(state, viewData) {
-            viewData.chartNumber = state.chartNumberCounter
-            state.chartNumberCounter += 1
             state.views.push(viewData)
         },
 
         updateView(state, viewData) {
             var element = state.views.find(el => el.chartNumber == state.dialogChartNumber)
             {
+                element.isFrozen = viewData.isFrozen
                 element.isSummary = viewData.isSummary
                 element.cols = viewData.cols
                 element.dataLabel = viewData.dataLabel
@@ -133,11 +131,10 @@ export default new Vuex.Store({
                 element.type = viewData.type
             }
         },
-
-
         openViewOption(state, id) {
             var element = state.views.find(el => el.chartNumber == id)
             state.dialogIsSummary = element.isSummary
+            state.dialogIsFrozen = element.isFrozen
             state.dialogChartNumber = id
             state.dialogCols = element.cols
             state.dialogDataLabel = element.dataLabel
@@ -157,15 +154,18 @@ export default new Vuex.Store({
             element.isFrozen = false
         },
 
-
         setGlobalPacketCount(state, globalPacketCount) {
             state.globalPacketCount = globalPacketCount;
         },
 
-
+        setSnackbar(state, newValue) {
+            state.snackbar = newValue
+        },
+        setSnackbarMessage(state,newValue) {
+            state.snackbarMessage = newValue
+        },
 
         setDialog(state, bool) {
-
             state.dialog = bool
         },
 
@@ -176,64 +176,146 @@ export default new Vuex.Store({
         setEndTime(state, endTime) {
             state.endTime = endTime;
         },
+
+        setDashboards(state, dashboards ){
+            state.dashboards = dashboards
+        },
+        addDashboard(state, newDashboard ){
+            state.dashboards.push(newDashboard)
+        },
+        removeDashboard(state, name ){
+            state.dashboards = state.dashboards.filter(elem => elem.name != name)
+        },
+
+        setCurrentDashboard(state, currentDashboard){
+            state.currentDashboard = currentDashboard
+        },
+
+        setViews(state, views){
+            state.views = views
+        }
     },
 
-
     actions: {
-        removeViewAndDecrementViewCounter(context, id) {
-            var element = context.state.views.find(el => el.chartNumber == id)
-            if (element.isSummary) {
-                context.dispatch('summaryData/decrementViewCounter', element.type)
-            }
-            else {
-                context.dispatch('detailData/decrementViewCounter', element.type)
+        getDashboardNames(context) {
+            DashboardService.getAllNames().then(response => {
+                const theme = localStorage.getItem("current_dashboard");
+                if (theme) {
+                    context.commit('setCurrentDashboard', theme)
 
-            }
-            context.commit('removeView', id)
+                }
+                else {
+                    context.commit('setCurrentDashboard', response.data[0].name)
+                }
+
+                context.commit('setDashboards',response.data)
+                context.dispatch('switchDashboard', context.state.currentDashboard)
+            })
+
         },
 
-        addViewAndIncrementViewCounter(context, viewData) {
-            viewData.chartNumber = context.state.chartNumberCounter
-            if (viewData.isSummary) {
-                context.dispatch('summaryData/incrementViewCounter', viewData.type)
+        addDashboard(context, name) {
+            const data = {
+                name: name
             }
-            else {
-                context.dispatch('detailData/incrementViewCounter', viewData.type)
-            }
-            context.commit('incrementChartNumberCounter')
-            context.commit("addView", viewData)
+            DashboardService.post(data).then((response) => {
+                context.commit('addDashboard',response.data)
+            })
+        },   
+        
+        removeDashboard(context,name) {
+            DashboardService.delete(name).then(() => {
+                context.commit('removeDashboard',name)
+                //change current dashboard if current dashboard is deleted
+                if (context.state.dashboards.length > 0 && context.state.currentDashboard==name) {
+                    context.dispatch('switchDashboard', context.state.dashboards[0].name)
+                }
+            })
         },
 
-        updateViewAndCounter(context, viewData) {
+        switchDashboard(context,name) {
+            if (name == context.state.currentDashboard && context.state.views.length > 0) {
+                return
+            }
+            DashboardService.get(name).then((response) => {
+                response.data.views.forEach(elem => {
+                   convertViewData(elem)
+                })
+                context.commit('setViews',response.data.views)
+                context.commit('setCurrentDashboard',response.data.name)
+                context.dispatch("summaryData/getDataByTime");
+                context.dispatch("detailData/getDataByTime"); 
+                localStorage.setItem("current_dashboard", response.data.name);
+                    
+             })
+        },
+
+        removeView(context, viewData) {
+            ViewService.delete(viewData.chartNumber).then(() => {
+                context.commit('removeView', viewData.chartNumber)
+                if (viewData.isSummary) {
+                    context.dispatch('summaryData/deleteDataIfNotActivated', viewData.type)
+                }
+                else {
+                    context.dispatch('detailData/deleteDataIfNotActivated', viewData.type)
+                }
+            })
+        },
+
+        addView(context, viewData) {
+            const data = {
+                'dashboard_name': context.state.currentDashboard,
+                'data_label': viewData.dataLabel,
+                'view_label': viewData.viewLabel,
+                'view_type': viewData.type,
+                'is_frozen': viewData.isFrozen,
+                'is_summary': viewData.isSummary,
+                'view': viewData.view,
+                'cols': viewData.cols
+            }
+         
+            ViewService.post(data).then(response => {
+                convertViewData(response.data)
+                context.commit("addView", response.data)
+                if (viewData.isSummary) {
+                    context.dispatch('summaryData/getDataIfActivated', viewData.type)
+                }
+                else {
+                    context.dispatch('detailData/getDataIfActivated', viewData.type)
+                }
+            })
+
+        },
+
+        updateView(context, viewData) {
             var element = context.state.views.find(el => el.chartNumber == context.state.dialogChartNumber)
             if (element.cols == viewData.cols && element.view == viewData.view && element.view && element.type == viewData.type &&
-                element.isSummary == viewData.isSummary) {
+                element.isSummary == viewData.isSummary && viewData.isFrozen == element.isFrozen) {
                 return
             }
             else {
-                if (viewData.isSummary != element.isSummary) {
-                    if (viewData.isSummary) {
-                        context.dispatch('summaryData/incrementViewCounter', viewData.type)
-                        context.dispatch('detailData/decrementViewCounter', element.type)
-
-                    }
-                    else {
-                        context.dispatch('summaryData/decrementViewCounter', element.type)
-                        context.dispatch('detailData/incrementViewCounter', viewData.type)
-
-                    }
+            const data = {
+                    'id' : context.state.dialogChartNumber,
+                    'dashboard_name': context.state.currentDashboard,
+                    'data_label': viewData.dataLabel,
+                    'view_label': viewData.viewLabel,
+                    'view_type': viewData.type,
+                    'is_frozen': viewData.isFrozen,
+                    'is_summary': viewData.isSummary,
+                    'view': viewData.view,
+                    'cols': viewData.cols
                 }
-                else if (element.type != viewData.type) {
-                    if (viewData.isSummary) {
-                        context.dispatch('summaryData/incrementViewCounter', viewData.type)
-                        context.dispatch('summaryData/decrementViewCounter', element.type)
-                    }
-                    else {
-                        context.dispatch('detailData/incrementViewCounter', viewData.type)
-                        context.dispatch('detailData/decrementViewCounter', element.type)
-                    }
-                }
-                context.commit('updateView', viewData)
+                ViewService.put(data).then((response) => {
+                    convertViewData(response.data)
+                    context.commit('updateView', response.data)
+                    context.dispatch('summaryData/getDataIfActivated', viewData.type)
+                    context.dispatch('summaryData/deleteDataIfNotActivated', element.type)
+                    context.dispatch('detailData/getDataIfActivated', viewData.type)
+                    context.dispatch('detailData/deleteDataIfNotActivated', element.type)
+            
+                })
+
+             
 
             }
 
@@ -242,6 +324,19 @@ export default new Vuex.Store({
 
     },
     getters: {
+        viewCountByViewSummary: (state) => (name) =>{
+            var counter = 0;
+            state.views.forEach(elem => (elem.type === name && elem.isSummary) ? counter++ : true)
+            return counter
+        },
+
+        viewCountByViewDetail: (state) => (name) =>{
+            var counter = 0;
+            state.views.forEach(elem => (elem.type === name && !elem.isSummary) ? counter++ : true)
+            return counter
+        },
+
+
         allFilters(state) {
             state.filters.tracker
             state.negativeFilters.tracker
@@ -332,7 +427,6 @@ export default new Vuex.Store({
             }
             return null
         },
-
 
 
         startDate: state => {

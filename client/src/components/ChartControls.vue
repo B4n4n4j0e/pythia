@@ -35,7 +35,7 @@ export default {
 
   methods: {
     removeView() {
-      this.$store.dispatch('removeViewAndDecrementViewCounter',this.chartNumber)
+      this.$store.dispatch('removeView',this.view)
     },
     
     configureView() {
