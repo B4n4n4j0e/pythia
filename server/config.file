@@ -1,0 +1,9 @@
+#fields	key	value
+pcap_path   /var/db/
+pcap_summary    T
+pcap_detail T
+sensor_path	/var/db/
+sensor_summary  T
+sensor_dedefault_views [{ view: 'treeMap', type: 'respHostsTopK', dataLabel: "Resp hosts top k", viewLabel: 'TreeMap', chartNumber: 30, cols: 6, isFrozen: false, isSummary: true }, ],tail   T
+network_scan_detection  T
+dns_tunneling_detection T
