@@ -1,20 +1,34 @@
-export function changeFilterTypeToLowerCaseOrUpperCase (filter){
-    if (filter.type  == 'service' || filter.type  =='proto') {
-        filter.filter= filter.filter.toLowerCase()
-     }
-     else if (filter.type == 'q_type' || filter.type  == 'q_rcode'){
-        filter.filter= filter.filter.toUpperCase()
-     }
+
+export function adjustFilter(filter) {
+    if (filter.type == 'service' || filter.type == 'proto') {
+        filter.filter = filter.filter.toLowerCase()
+    }
+    else if (filter.type == 'q_type' || filter.type == 'q_rcode') {
+        filter.filter = filter.filter.toUpperCase()
+    }
     return filter
 }
 
 export function convertViewData(view) {
     view.isFrozen = view.isFrozen === "True"
     view.isSummary = view.isSummary === "True"
-    view.chartNumber =  parseInt(view.chartNumber)
-    view.cols =  parseInt(view.cols)
+    view.chartNumber = parseInt(view.chartNumber)
+    view.cols = parseInt(view.cols)
 }
 
+/**
+* adds or removes filter from update filter tracker
+*/
+
+export function checkFilterTracker(addFilter, removeFilter, filter) {
+    var changeTrackerEntry = filter.type + ":" + filter.filter
+    if (removeFilter.has(changeTrackerEntry)) {
+        removeFilter.delete(changeTrackerEntry)
+    }
+    else {
+        addFilter.add(changeTrackerEntry)
+    }
+}
 
 export function getDetailElementByChartType(state, type) {
     switch (type) {
@@ -48,7 +62,6 @@ export function getDetailElementByChartType(state, type) {
 }
 
 
-
 export function dispatchDetailViewByType(context, type) {
     switch (type) {
         case 'respHostsTopK':
@@ -56,41 +69,41 @@ export function dispatchDetailViewByType(context, type) {
             break;
         case 'respPortsTopK':
             context.dispatch('getRespPortsTopK')
-            break;        
+            break;
         case 'originHostsTopK':
             context.dispatch('getOriginHostsTopK')
-            break;               
+            break;
         case 'dNSQueriesTopK':
             context.dispatch('getDNSQueriesTopK')
-            break;       
+            break;
         case 'portsOfInterest':
             context.dispatch('getPortsOfInterest')
-            break;               
+            break;
         case 'connectionSummary':
             context.dispatch('getConnectionSummary')
-            break;               
+            break;
         case 'protocolSummary':
             context.dispatch('getProtocolSummary')
-            break;               
+            break;
         case 'serviceSummary':
             context.dispatch('getServiceSummary')
-            break;       
+            break;
         case 'ipByteSummary':
             context.dispatch('getIPByteSummary')
-            break;       
+            break;
         case 'ipByteSummaryByTime':
-            context.dispatch('getIPByteSummary')
-            break;               
+            context.dispatch('getIPByteSummaryByTime')
+            break;
         case 'noticeTable':
             context.dispatch('getNotices')
-            break;               
+            break;
         case 'dNSTable':
             context.dispatch('getDNSConnections')
-            break;               
+            break;
         case 'connectionTable':
             context.dispatch('getConnections')
-            break;              
-        }
+            break;
+    }
 }
 
 
@@ -106,7 +119,7 @@ export function getSummaryElementByChartType(state, type) {
             return state.dNSQueriesTopK
         case 'portsOfInterest':
             return state.portsOfInterest
-        case 'connectionSummary': 
+        case 'connectionSummary':
             return state.connectionSummary
         case 'protocolSummary':
             return state.protocolSummary
@@ -127,30 +140,30 @@ export function dispatchSummaryViewByType(context, type) {
             break;
         case 'respPortsTopK':
             context.dispatch('getRespPortsTopK')
-            break;        
+            break;
         case 'originHostsTopK':
             context.dispatch('getOriginHostsTopK')
-            break;               
+            break;
         case 'dNSQueriesTopK':
             context.dispatch('getDNSQueriesTopK')
-            break;       
+            break;
         case 'portsOfInterest':
             context.dispatch('getPortsOfInterest')
-            break;               
+            break;
         case 'connectionSummary':
             context.dispatch('getConnectionSummary')
-            break;               
+            break;
         case 'protocolSummary':
             context.dispatch('getProtocolSummary')
-            break;               
+            break;
         case 'serviceSummary':
             context.dispatch('getServiceSummary')
-            break;       
+            break;
         case 'ipByteSummary':
             context.dispatch('getIPByteSummary')
-            break;       
+            break;
         case 'ipByteSummaryByTime':
-            context.dispatch('getIPByteSummary')
-            break;               
-}
+            context.dispatch('getIPByteSummaryByTime')
+            break;
+    }
 }

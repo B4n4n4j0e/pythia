@@ -1,0 +1,17 @@
+[Unit]
+Description=uWSGI Python container for Pythia
+After=network.target
+
+[Service]
+User=pythia
+Group=www-data
+WorkingDirectory=/home/dude/pythia/server
+Environment="PATH=/home/dude/pythia/server/venv/bin"
+Environment="VUE_APP_API_BASE_URL=192.168.2.115"
+ExecStart=/home/dude/pythia/server/venv/bin/uwsgi --ini pythia_api.ini
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

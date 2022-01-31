@@ -3,12 +3,12 @@ import Api from './Api'
 export default {
     get(start, end) {
         if (start && end) {
-            return Api().get("connection-summary",{params: {'start-time': start/1000, 'end-time': end/1000}})
+            return Api().get("/api/connection-summary", { params: { 'start-time': start, 'end-time': end } })
         }
-        return Api().get('connection-summary')
+        return Api().get('/api/connection-summary')
     },
-    post(data){
-        return Api().post('/connection-summary', data)
+    post(data) {
+        return Api().post('/api/connection-summary', data)
     }
 
 }

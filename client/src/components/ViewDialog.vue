@@ -22,7 +22,7 @@
                     required
                   ></v-select>
                 </v-col>
-              <v-col cols="12" sm="6">
+                <v-col cols="12" sm="6">
                   <v-select
                     v-model="selectedData"
                     :disabled="selectedDataType == ''"
@@ -40,7 +40,7 @@
                     :items="viewOptions"
                     label="Choose view*"
                     required
-                  ></v-select> 
+                  ></v-select>
                 </v-col>
                 <v-col cols="3">
                   <v-select
@@ -49,17 +49,18 @@
                     label="Width*"
                     required
                   ></v-select>
-                </v-col> 
+                </v-col>
               </v-row>
             </v-container>
             <small>*indicates required field</small>
-          </v-card-text> 
+          </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
+
             <v-btn color="primary" text @click="closeDialog"> Close </v-btn>
             <v-btn
               color="primary"
-              :disabled="selectedView == ''"
+              :disabled="!viewOptions.includes(selectedView)"
               text
               v-on="
                 dialogTitle == 'Add view'
@@ -100,18 +101,14 @@ export default {
       if (this.selectedDataType == "Summary Data") {
         return result;
       } else {
-        result.unshift(
-          "Connection table",
-          "DNS table",
-          "Notice table"
-        );
+        result.unshift("Connection table", "DNS table", "Notice table");
         return result;
       }
     },
 
     viewOptions() {
       var summaries = [
-        "DNS queries top k", 
+        "DNS queries top k",
         "Origin hosts top k",
         "Resp hosts top k",
         "Resp ports top k",
@@ -120,22 +117,23 @@ export default {
         "Services summary",
         "Data volume summary",
       ];
-      var lineCharts = [
-        "Connections per timeunit",
-        "Data volume per timeunit",
-      ];
+      var lineCharts = ["Connections per timeunit", "Data volume per timeunit"];
       if (summaries.includes(this.selectedData)) {
-        return ["Bar chart horizontal", "Bar chart vertical", "Pie chart", "TreeMap"];
+        return [
+          "Bar chart horizontal",
+          "Bar chart vertical",
+          "Pie chart",
+          "TreeMap",
+        ];
       } else if (lineCharts.includes(this.selectedData)) {
         return ["Line chart"];
       } else if (this.selectedData == "Connection table") {
         return ["Connection table"];
       } else if (this.selectedData == "DNS table") {
         return ["DNS table"];
-      } else if (this.selectedData == "Notice table"){
+      } else if (this.selectedData == "Notice table") {
         return ["Notice table"];
-      }
-      else return [];
+      } else return [];
     },
     dialog() {
       return this.$store.state.dialog;
@@ -147,7 +145,7 @@ export default {
       if (this.dialog == false) {
         return;
       } else {
-        this.$store.commit("setDialog", false);
+        this.$store.dispatch("setDialog", false);
         if (this.$store.state.dialogIsSummary) {
           this.selectedDataType = "Summary Data";
         } else {
@@ -159,7 +157,6 @@ export default {
         this.selectedView = this.$store.state.dialogViewLabel;
         this.windowWidth = this.$store.state.dialogCols;
         this.dialogBool = true;
-
       }
     },
   },
@@ -172,7 +169,6 @@ export default {
     windowWidth: 6,
   }),
   methods: {
-
     closeDialog() {
       this.selectedDataType = "";
       this.selectedView = "";
@@ -181,17 +177,19 @@ export default {
       this.dialogBool = false;
     },
 
-
     saveView() {
-      if (this.selectedDataType =="" || this.selectedView == "" ||   this.selectedData == "") {
-        return
+      if (
+        this.selectedDataType == "" ||
+        this.selectedView == "" ||
+        this.selectedData == ""
+      ) {
+        return;
       }
-      var summary
-      if (this.selectedDataType == 'Summary Data'){
-        summary = true
-      }
-      else {
-        summary = false 
+      var summary;
+      if (this.selectedDataType == "Summary Data") {
+        summary = true;
+      } else {
+        summary = false;
       }
       var viewData = {
         view: viewDataToChartName(this.selectedView),
@@ -200,22 +198,25 @@ export default {
         viewLabel: this.selectedView,
         cols: this.windowWidth,
         isSummary: summary,
-        isFrozen: false
+        isFrozen: false,
       };
       this.$store.dispatch("addView", viewData);
       this.closeDialog();
     },
 
     updateView() {
-       if (this.selectedDataType =="" || this.selectedView == "" ||   this.selectedData == "") {
-        return
+      if (
+        this.selectedDataType == "" ||
+        this.selectedView == "" ||
+        this.selectedData == ""
+      ) {
+        return;
       }
-      var summary
-      if (this.selectedDataType == 'Summary Data'){
-        summary = true
-      }
-      else {
-        summary = false 
+      var summary;
+      if (this.selectedDataType == "Summary Data") {
+        summary = true;
+      } else {
+        summary = false;
       }
       var viewData = {
         id: this.$store.state.dialogChartNumber,
@@ -225,13 +226,11 @@ export default {
         viewLabel: this.selectedView,
         cols: this.windowWidth,
         isSummary: summary,
-        isFrozen: this.$store.state.dialogIsFrozen
+        isFrozen: this.$store.state.dialogIsFrozen,
       };
       this.$store.dispatch("updateView", viewData);
       this.closeDialog();
     },
-
-
   },
 };
 </script>

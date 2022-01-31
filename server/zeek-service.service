@@ -1,6 +1,6 @@
 [Unit]
 Description=zeek network analysis engine
-#After=network.target
+After=network.target
 
 [Service]
 Type=forking
@@ -8,7 +8,7 @@ PIDFIle=/usr/local/zeek/spool/zeek/.pid
 WorkingDirectory=/home/dude/projects/pythia/server
 ExecStart=/usr/local/zeek/bin/zeekctl start
 ExecStop=/usr/local/zeek/bin/zeekctl stop
-User=zeek
+User=pyhia
 Restart=always
 RestartSec=5
 

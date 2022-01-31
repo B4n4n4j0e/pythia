@@ -1,11 +1,11 @@
 <template>
-  <v-card>
+  <v-card flat>
     <v-data-table
-      dense
       :headers="headers"
       :items="filters"
       hide-default-footer
       :item-class="itemRowBackground"
+      :options="{ itemsPerPage: -1 }"
     >
       <template v-slot:top>
         <v-toolbar flat>
@@ -52,14 +52,14 @@
                         append-icon="mdi-filter"
                         label="Filter*"
                         :rules="
-                          selectedOption.startsWith('Text') ?  [] : numberRules
+                          selectedOption.startsWith('Text') ? [] : numberRules
                         "
                       ></v-text-field>
                     </v-col>
                   </v-row>
                   <v-row v-if="selectedOption == 'Text'">
                     <div
-                      v-for="(textOption,i) in textOptions"
+                      v-for="(textOption, i) in textOptions"
                       v-bind:key="i"
                       class="d-flex pl-2 ml-2"
                     >
@@ -75,7 +75,7 @@
                     <v-col cols="4">
                       <v-row
                         no-gutters
-                        v-for="(portOption,i) in portOptions"
+                        v-for="(portOption, i) in portOptions"
                         v-bind:key="i"
                         class="d-flex"
                       >
@@ -99,7 +99,7 @@
                     <v-col cols="8">
                       <v-row
                         no-gutters
-                        v-for="(compOption,i) in compOptions"
+                        v-for="(compOption, i) in compOptions"
                         v-bind:key="i"
                         class="d-flex"
                       >
@@ -134,9 +134,11 @@
                     </v-col>
                   </v-row>
                   <v-row class="flex align-end" align-begin
-                    >*  Each space sets an additional filte. </v-row
+                    >* Each space sets an additional filte.
+                  </v-row>
+                  <v-row class="flex align-end" align-begin
+                    >* If you want to use spaces for a filter, use " ".</v-row
                   >
-                  <v-row class="flex align-end" align-begin>* If you want to use spaces for a filter, use " ".</v-row>
                 </v-container>
               </v-card-text>
               <v-card-actions>
@@ -211,7 +213,7 @@ export default {
       { text: "Actions", value: "actions", sortable: false },
     ],
     options: ["Text", "Port", "Comparison"],
-  
+
     textOptions: [
       { text: "Origin Host", isActive: false, filterName: "source" },
       { text: "Responder Host", isActive: false, filterName: "target" },
@@ -223,8 +225,16 @@ export default {
       { text: "Error Code", isActive: false, filterName: "q_rcode" },
       { text: "UID", isActive: false, filterName: "uid" },
       { text: "Notice UID", isActive: false, filterName: "notice_uid" },
-      { text: "Notice Origin Host", isActive: false, filterName: "notice_source" },
-      { text: "Notice Resp Host", isActive: false, filterName: "notice_target" },
+      {
+        text: "Notice Origin Host",
+        isActive: false,
+        filterName: "notice_source",
+      },
+      {
+        text: "Notice Resp Host",
+        isActive: false,
+        filterName: "notice_target",
+      },
       { text: "Notice Header", isActive: false, filterName: "notice_header" },
     ],
 
@@ -266,40 +276,41 @@ export default {
       return item.isNegative ? "red-text" : "";
     },
     removeFilter(item) {
-      this.$store.commit("removeFilterByFilterName", item);
+      this.$store.dispatch("removeFilterByFilterName", item);
     },
 
     removeAllFilters() {
-      this.$store.commit("removeAllFilters");
+      this.$store.dispatch("removeAllFilters");
       this.dialogDelete = false;
     },
+
+    /**
+     * Checks regex for specific filters and dispatches them to the store
+     */
     sendFilterOption(option) {
-      const regex = /(".*?")|(\S+)/g
-      var filters = []
-     
-      for (var match of this.filterText.matchAll(regex)){
-         var filter
-         if (match[1]) {
-            filter = match[1].replace(/^"\s*|\s*"$/g,"")
-          }
-          else {
-            filter = match[2].replace(/^\s*|\s*$/g,"")
-          }
-          filters.push(filter)
+      const regex = /(".*?")|(\S+)/g;
+      var filters = [];
+
+      for (var match of this.filterText.matchAll(regex)) {
+        var filter;
+        if (match[1]) {
+          filter = match[1].replace(/^"\s*|\s*"$/g, "");
+        } else {
+          filter = match[2].replace(/^\s*|\s*$/g, "");
+        }
+        filters.push(filter);
       }
       filters.forEach((filter) => {
         if (this.selectedOption == "Text") {
           this.textOptions.forEach((value) => {
             if (value.isActive) {
-              this.$store.commit(option, {
+              this.$store.dispatch(option, {
                 type: value.filterName,
                 filter: filter,
               });
             }
           });
-        }
-
-      else if (this.selectedOption == "Port") {
+        } else if (this.selectedOption == "Port") {
           if (
             !(
               this.patternNumber.test(this.filterText) &&
@@ -312,13 +323,9 @@ export default {
             if (value.isActive) {
               var newFilter = filter;
               if (this.portProtocolText != "") {
-                newFilter = (
-                  filter +
-                  "/" +
-                  this.portProtocolText
-                )
+                newFilter = filter + "/" + this.portProtocolText;
               }
-              this.$store.commit(option, {
+              this.$store.dispatch(option, {
                 type: value.filterName,
                 filter: newFilter,
               });
@@ -337,7 +344,7 @@ export default {
                 this.compOperators.operators[
                   this.compOperators.activeOperator
                 ][0] + filter;
-              this.$store.commit(option, {
+              this.$store.dispatch(option, {
                 type: value.filterName,
                 filter: newFilter,
               });
@@ -399,5 +406,10 @@ export default {
 }
 >>> .red-text {
   color: red;
+}
+>>> .v-data-table__wrapper {
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 500px;
 }
 </style>

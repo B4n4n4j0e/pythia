@@ -1,7 +1,7 @@
 import Vue from "vue"
 import VueRouter from "vue-router"
-import Dashboard from "../components/Dashboard"
-import Configuration from "../components/Configuration"
+import Dashboard from "../views/Dashboard"
+import Configuration from "../views/Configuration"
 
 
 Vue.use(VueRouter);
@@ -17,9 +17,8 @@ const routes = [
     }
 ]
 
-const router = new VueRouter({
+export default new VueRouter({
     mode: "history",
     routes
 })
 
-export default router
