@@ -516,7 +516,7 @@ def join_models_if_necessary(session, model, filters, negative_filters, connecti
     elif model == DNSModel:
         return session.outerjoin(ConnectionModel)
     elif args_contain_dns_filter(filters) or args_contain_dns_filter(negative_filters):
-        return session.join(DNSModel)
+        return session.distinct().join(DNSModel)
     else:
         return session
 

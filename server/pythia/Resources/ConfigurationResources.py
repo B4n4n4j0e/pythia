@@ -10,7 +10,6 @@ from pythia.HelperFunctions.MessageHelper import success_message
 
 ALLOWED_EXTENSIONS = {'pcap'}
 
-
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -97,7 +96,7 @@ class DetailData(Resource):
         else:
             last_date = -1
         connection_count = ConnectionModel.query.count()
-        path = get_detail_db_path_by_mode(active_mode)
+        path = get_detail_db_path_by_mode(get_mode())
         size = get_db_size(path)
         size_in_mb = round(size / (1024*1024), 2)
         data = {'first_date': first_date, 'last_date': last_date,
@@ -110,7 +109,6 @@ class DetailData(Resource):
         if start_time and end_time:
             ConnectionModel.query.filter(
                 ConnectionModel.ts >= start_time, ConnectionModel.ts <= end_time).delete()
-            DNSModel.query.delete()
             NoticeModel.query.filter(
                 NoticeModel.ts >= start_time, NoticeModel.ts <= end_time).delete()
             db.session.commit()
@@ -147,7 +145,7 @@ class SummaryData(Resource):
         if connection_count is None:
             connection_count = 0
 
-        path = get_summary_db_path_by_mode(active_mode)
+        path = get_summary_db_path_by_mode(get_mode())
         size = get_db_size(path)
         size_in_mb = round(size / (1024*1024), 2)
 
@@ -198,13 +196,13 @@ api.add_resource(SummaryData, '/api/summary-data')
 class Mode(Resource):
     @marshal_with(mode_resource_fields)
     def get(self):
-        global active_mode
+        active_mode = get_mode()
         data = {"mode": active_mode}
         return data
 
     @marshal_with(mode_resource_fields)
     def post(self):
-        global active_mode
+        active_mode = get_mode()
         args = mode_parser.parse_args()
         new_mode = args['mode']
         if is_pcap_processing() and new_mode == 'PCAP':
@@ -213,8 +211,8 @@ class Mode(Resource):
         if active_mode != new_mode:
             create_db_if_not_exist(new_mode)
             set_sql_alchemy_binds_by_mode(new_mode)
-            active_mode = new_mode
-        data = {"mode": active_mode}
+            set_mode(new_mode)
+        data = {"mode": get_mode()}
         return data
 
 

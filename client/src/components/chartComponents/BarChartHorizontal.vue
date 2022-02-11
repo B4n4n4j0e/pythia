@@ -73,13 +73,14 @@ export default {
   },
   watch: {
     payload: function () {
-      if (this.$store.getters.viewById(this.chartNumber).isFrozen) {
+      if (this.isFrozen) {
         return;
       } else {
         this.updateChart();
       }
     },
-    isFrozen: function () {
+
+    isFrozen() {
       if (this.isFrozen) {
         return;
       } else {
@@ -185,6 +186,12 @@ export default {
       bar
         .transition()
         .duration(1000)
+        .style("fill", function (d) {
+          if (isFiltered(d, vm)) {
+            return "var(--v-tertiary-base)";
+          }
+          return "var(--v-primary-base)";
+        })
         .attr("width", function (d) {
           return scX(d.value);
         })
@@ -250,8 +257,7 @@ export default {
      */
     changeFilter() {
       const vm = this;
-      d3.select("#" + this.id)
-        .select("g.bars" + this.chartNumber)
+      d3.select("g.bars" + this.chartNumber)
         .selectAll("rect")
         .style("fill", function (d) {
           if (isFiltered(d, vm)) {

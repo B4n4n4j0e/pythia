@@ -14,7 +14,7 @@ class DNSModel(db.Model):
     q_rcode = db.Column('rcode_name', db.Text)
 
     def __repr__(self):
-        return f"DNS('{self.uid}','{self.query_text}','{self.answers}','{self.qtype_name}','{self.rcode_name}')"
+        return f"DNS('{self.uid}','{self.query_text}','{self.q_answers}','{self.q_type}','{self.q_rcode}')"
 
     def get_response_name():
         return 'dNSConnections'
@@ -40,13 +40,13 @@ class NoticeModel(db.Model):
 class ConnectionModel(db.Model):
     __bind_key__ = 'detail'
     __tablename__ = 'conn'
+    row_id = db.Column('rowid', db.Integer, primary_key=True)
     ts = db.Column(FLOAT)
     dns_conn = db.relationship(
         DNSModel, backref="connection", passive_deletes=True)
-    row_id = db.Column('rowid', db.Integer, primary_key=True)
     notice_conn = db.relationship(
         NoticeModel, backref="connection", passive_deletes=True)
-    uid = db.Column(db.String, primary_key=True)
+    uid = db.Column(db.Text, primary_key=True)
     source = db.Column('id.orig_h', db.Text)
     orig_p = db.Column('id.orig_p', db.Integer)
     target = db.Column('id.resp_h', db.Text)

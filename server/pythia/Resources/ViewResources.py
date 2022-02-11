@@ -15,6 +15,7 @@ class View(Resource):
                          view_label=args['view_label'], cols=args['cols'], is_frozen=args['is_frozen'],
                          is_summary=args['is_summary'], dashboard_name=args["dashboard_name"])
         p = db.session.query(DashboardModel).get(args['dashboard_name'])
+        print(args)
         p.view.append(view)
         db.session.commit()
         return view

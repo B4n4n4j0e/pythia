@@ -4,12 +4,11 @@ from subprocess import check_output, run, call, PIPE
 import re
 from shutil import move
 from os import getenv, path, access, X_OK, W_OK, environ, path
-from dotenv import set_key, find_dotenv, load_dotenv
+from dotenv import set_key
 from pythia.HelperFunctions.MaintainDatabaseHelper import delete_table_entries_by_type, create_database_by_type
 from pythia.CustomExceptions.PythiaDatabaseError import PythiaDatabaseError
+from pythia import dotenv_file
 
-dotenv_file = find_dotenv()
-load_dotenv(dotenv_file)
 active_mode = 'Sensor'
 
 
@@ -342,3 +341,10 @@ def process_zeek(path):
             abort(503, message='Something went wrong while processing the file')
     except FileNotFoundError:
         abort(500, message=StatusEntry.error_message)
+
+def set_mode(mode):
+    global active_mode
+    active_mode = mode
+
+def get_mode():
+    return active_mode
