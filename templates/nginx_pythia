@@ -1,0 +1,14 @@
+server {
+    listen 80;
+    server_name localhost;
+
+    location /api {
+        include uwsgi_params;
+        uwsgi_pass unix:/opt/pythia/server/pythia.sock;
+    }
+
+  location / {
+    root /opt/pythia/client/dist;
+    try_files $uri $uri/ /index.html;
+  }
+}
