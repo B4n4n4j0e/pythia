@@ -1,16 +1,13 @@
 from flask import Flask
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
 from sqlalchemy.orm import object_mapper
 from os import getenv, path
 from dotenv import load_dotenv,find_dotenv
 from pythia.HelperFunctions.MaintainDatabaseHelper import create_database_by_type
 from pythia.CustomExceptions.PythiaDatabaseError import PythiaDatabaseError
 
-#@todo delete CORS
 app = Flask(__name__)
-cors = CORS(app)
 
 dotenv_file = find_dotenv()
 #loads environment configdata
