@@ -6,8 +6,8 @@ After=network.target
 User=pythia
 Group=www-data
 WorkingDirectory=/home/dude/pythia/server
-Environment="PATH=/opt/pythia/server/venv/bin"
-ExecStart=/opt/pythia/server/venv/bin/uwsgi --ini pythia_api.ini
+Environment="PATH=/opt/pythia/server/venv/bin:/usr/bin"
+ExecStart=/opt/pythia/server/venv/bin/uwsgi --ini pythia.ini
 
 Restart=always
 RestartSec=5
