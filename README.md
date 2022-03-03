@@ -28,6 +28,7 @@ Before running pythia, you have to ensure, that the following dependencies are i
 - Zeek (https://docs.zeek.org/en/master/install.html)
 - pythia_plugin (https://github.com/B4n4n4j0e/pythia_plugin)
 - Python 3.9 or higher
+- python3-venv
 - pip3 20.3.4 or higher
 - install npm 6.14.4 or higher
 - Git
@@ -36,7 +37,6 @@ Before running pythia, you have to ensure, that the following dependencies are i
 # Additional Dependencies for Production
 - python3-dev 
 - nginx
-- python3-venv
 
 # Zeek configuration
 - Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```
