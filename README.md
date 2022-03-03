@@ -127,7 +127,6 @@ If you don't want to setup a proxy for development, just download and install th
 
 ## Source for production section
 https://stackabuse.com/single-page-apps-with-vue-js-and-flask-deployment
-<<<<<<< HEAD
 
 # Zeek configuration
 - Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```
