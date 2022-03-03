@@ -73,9 +73,9 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 8: Run the application with ```python3 run.py```
 
 ## Frontend
-- Step 1: Switch to directory client and run 
+- Step 1: Switch to directory pythia/client and run 
 ```npm install```
-- Step 2: Switch directory to client and run 
+- Step 2: Switch directory to pythia/client and run 
 		```npm run serve``` 
 		which compiles and hot relaods for development
 
