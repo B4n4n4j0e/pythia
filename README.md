@@ -28,8 +28,8 @@ Before running pythia, you have to ensure, that the following dependencies are i
 - Zeek (https://docs.zeek.org/en/master/install.html)
 - pythia_plugin (https://github.com/B4n4n4j0e/pythia_plugin)
 - Python 3.9 or higher
-- python3-venv
 - pip3 20.3.4 or higher
+- python3-venv
 - install npm 6.14.4 or higher
 - Git
 - cmake
@@ -37,9 +37,6 @@ Before running pythia, you have to ensure, that the following dependencies are i
 # Additional Dependencies for Production
 - python3-dev 
 - nginx
-
-# Zeek configuration
-- Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```
 
 # How to install for development
 If you don't want to setup a proxy for development, just download and install the branch dev. In this branch the flask_cors extension is used for the backend, which makes cross-origin AJAX possible.
@@ -49,7 +46,7 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 2: Clone git repository
 
 ## Backend
-- Step 1: copy templates/env.txt to pythia/server/.env
+- Step 1: copy templates/env.txt to pythia/server/pythia/.env
 - Step 2: Edit the .env file with the required information:
 
 |Entry				              | Description|
@@ -59,7 +56,7 @@ If you don't want to setup a proxy for development, just download and install th
 |PYTHIA_PATH=''					    | Path where the sensor databases will be stored|
 |PYTHIA_PCAP_PATH=''				| Path where the pcap databases will be stored|
 |PYTHIA_UPLOAD_PATH=''			| Path of upload path for pcap files|
-|ZEEK_PLUGIN_PATH=''				| Path to pythia_plugin/build directory|
+|export ZEEK_PLUGIN_PATH=''				| Path to pythia_plugin/build directory|
 |ZEEK_LOCATION=''				    | Path to zeek installation|
 |PYTHIA_ZEEK_MODE="sensor"	| Keep value sensor|
 |BASE_URL=""	| IP-adress of network interface 
@@ -93,11 +90,11 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 6: Switch to directory /pythia/server/
 - Step 7: Create virtual environment: ``` python3 -m venv ./venv``` 
 - Step 8: Activate virtual environment: ```source venv/bin/activate```
-- Step 9: Run the command ```python3 -m pip install -r requirements.txt```
+- Step 9 Run the command ```python3 -m pip install -r requirements.txt```
 - Step 10: Create Service user 
 	```sudo useradd -r pythia_user -s /bin/false ```
 - Step 11: Provide the user with permissions to use Zeek 
-- Step 12: copy pythia/templates/env.txt to pythia/server/.env
+- Step 12: copy pythia/templates/env.txt to pythia/server/pythia/.env
 - Step 13: Edit the .env file with the required information:
 
 |Entry				              | Description|
@@ -107,7 +104,7 @@ If you don't want to setup a proxy for development, just download and install th
 |PYTHIA_PATH=''					    | Path where the sensor databases will be stored|
 |PYTHIA_PCAP_PATH=''				| Path where the pcap databases will be stored|
 |PYTHIA_UPLOAD_PATH=''			| Path of upload path for pcap files|
-|ZEEK_PLUGIN_PATH=''				| Path to pythia_plugin/build directory|
+|export ZEEK_PLUGIN_PATH=''				| Path to pythia_plugin/build directory|
 |ZEEK_LOCATION=''				    | Path to zeek installation|
 |PYTHIA_ZEEK_MODE="sensor"	| Keep value sensor|
 |BASE_URL=""	| IP-adress of network interface 
@@ -118,14 +115,18 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 17: ```sudo systemctl status pythia```
 	- You can check if pythia.sock is created in the WorkingDirectory path and if the service is running
 	- If the server is not running, the user of the service might not have the necessary access.
-- Step 18: Enter the command ```sudo systemctl enable pythia``` to enable the service
+- Step 18: Enter the command ```sudo systemctl enable pythia`` to enable the service
 
 ## Setting up nginx
 - Step 1: Edit /pythia/template/nginx_pythia according to your configuration
 - Step 2: Move /pythia/template/nginx_pythia to /etc/nginx/sites-available
-- Step 3: Create link ```sudo ln -s /etc/nginx/sites-available/nginx_pythia /etc/nginx/sites-enabled ```
-- Step 3: Create firewall permission for nginx ```sudo ufw allow 'Nginx Full' ```
-- Step 4: Restart nginx service ```sudo systemctl restart nginx```
+- Step 3: Remove every link in  ```/etc/nginx/sites-enabled ```
+- Step 4: Create link ```sudo ln -s /etc/nginx/sites-available/nginx_pythia /etc/nginx/sites-enabled ```
+- Step 5: Create firewall permission for nginx``` sudo ufw allow 'Nginx Full' ```
+- Step 6: Restart nginx service``` sudo systemctl restart nginx ```
 
 ## Source for production section
 https://stackabuse.com/single-page-apps-with-vue-js-and-flask-deployment
+
+# Zeek configuration
+- Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```

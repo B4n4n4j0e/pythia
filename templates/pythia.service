@@ -3,7 +3,7 @@ Description=uWSGI Python container for Pythia
 After=network.target
 
 [Service]
-User=pythia
+User=pythia_user
 Group=www-data
 WorkingDirectory=/home/dude/pythia/server
 Environment="PATH=/opt/pythia/server/venv/bin:/usr/bin"
