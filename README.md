@@ -131,5 +131,3 @@ https://stackabuse.com/single-page-apps-with-vue-js-and-flask-deployment
 
 # Zeek configuration
 - Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```
-=======
->>>>>>> 7a869c0213f94269a21c5ecd87dd67648c29b75c
