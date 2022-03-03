@@ -91,8 +91,8 @@ If you don't want to setup a proxy for development, just download and install th
 		which compiles and minifies for production
 - Step 5: Copy /pythia/templates/pythia.ini to /pythia/server
 - Step 6: Switch to directory /pythia/server/
-- Step 7: (Optional): Create virtual environment: ``` python3 -m venv ./venv``` 
-- Step 8: (Optional): Activate virtual environment: ```source venv/bin/activate```
+- Step 7: Create virtual environment: ``` python3 -m venv ./venv``` 
+- Step 8: Activate virtual environment: ```source venv/bin/activate```
 - Step 9: Run the command ```python3 -m pip install -r requirements.txt```
 - Step 10: Create Service user 
 	```sudo useradd -r pythia_user -s /bin/false ```
