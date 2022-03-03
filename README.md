@@ -49,7 +49,7 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 2: Clone git repository
 
 ## Backend
-- Step 1: copy templates/env.txt to pythia/server/pythia/.env
+- Step 1: copy templates/env.txt to pythia/server/.env
 - Step 2: Edit the .env file with the required information:
 
 |Entry				              | Description|
@@ -97,7 +97,7 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 10: Create Service user 
 	```sudo useradd -r pythia_user -s /bin/false ```
 - Step 11: Provide the user with permissions to use Zeek 
-- Step 12: copy pythia/templates/env.txt to pythia/server/pythia/.env
+- Step 12: copy pythia/templates/env.txt to pythia/server/.env
 - Step 13: Edit the .env file with the required information:
 
 |Entry				              | Description|
