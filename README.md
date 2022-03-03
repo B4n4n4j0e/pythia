@@ -68,7 +68,7 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 3: Switch to directory /pythia/server`
 - Step 4: Create virtual environment: ``` python3 -m venv ./venv``` 
 - Step 5: Activate virtual environment: ```source venv/bin/activate```
-- Step 6: Run the command ```pip3 -r requirements.txt```
+- Step 6: Run the command ```python3 -m pip install -r requirements.txt```
 - Step 7: For debugging purposes I would recommend to go to pythia/server/run.py and change the line ```app.run()``` to ```app.run(debug)```
 - Step 8: Run the application with ```python3 run.py```
 
