@@ -42,7 +42,7 @@ Before running pythia, you have to ensure, that the following dependencies are i
 - Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```
 
 # How to install for development
-If you don't want to setup a proxy for development, just download and install the branch no_proxy. In this branch the flask_cors extension is used for the backend, which makes cross-origin AJAX possible.
+If you don't want to setup a proxy for development, just download and install the branch dev. In this branch the flask_cors extension is used for the backend, which makes cross-origin AJAX possible.
 
 ## Front and Backend 
 - Step 1: Install required dependencies
@@ -65,12 +65,12 @@ If you don't want to setup a proxy for development, just download and install th
 |BASE_URL=""	| IP-adress of network interface 
 
 	
-- Step 3 Switch to directory /pythia/server`
-- Step 4 (Optional): Create virtual environment: ``` python3 -m venv ./venv``` 
-- Step 5 (Optional): Activate virtual environment: ```source venv/bin/activate```
-- Step 6 Run the command ```pip3 -r requirements.txt```
-- Step 7 For debugging purposes I would recommend to go to pythia/server/run.py and change the line ```app.run()``` to ```app.run(debug)```
-- Step 8 Run the application with ```python3 run.py```
+- Step 3: Switch to directory /pythia/server`
+- Step 4: Create virtual environment: ``` python3 -m venv ./venv``` 
+- Step 5: Activate virtual environment: ```source venv/bin/activate```
+- Step 6: Run the command ```pip3 -r requirements.txt```
+- Step 7: For debugging purposes I would recommend to go to pythia/server/run.py and change the line ```app.run()``` to ```app.run(debug)```
+- Step 8: Run the application with ```python3 run.py```
 
 ## Frontend
 - Step 1: Switch to directory client and run 
@@ -89,11 +89,11 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 4 Enter command
 ```npm run build``` 
 		which compiles and minifies for production
-- Step 5 Copy /pythia/templates/pythia.ini to /pythia/server
-- Step 6 Switch to directory /pythia/server/
-- Step 7 (Optional): Create virtual environment: ``` python3 -m venv ./venv``` 
-- Step 8 (Optional): Activate virtual environment: ```source venv/bin/activate```
-- Step 9 Run the command ```python3 -m pip install -r requirements.txt```
+- Step 5: Copy /pythia/templates/pythia.ini to /pythia/server
+- Step 6: Switch to directory /pythia/server/
+- Step 7: (Optional): Create virtual environment: ``` python3 -m venv ./venv``` 
+- Step 8: (Optional): Activate virtual environment: ```source venv/bin/activate```
+- Step 9: Run the command ```python3 -m pip install -r requirements.txt```
 - Step 10: Create Service user 
 	```sudo useradd -r pythia_user -s /bin/false ```
 - Step 11: Provide the user with permissions to use Zeek 
@@ -118,14 +118,14 @@ If you don't want to setup a proxy for development, just download and install th
 - Step 17: ```sudo systemctl status pythia```
 	- You can check if pythia.sock is created in the WorkingDirectory path and if the service is running
 	- If the server is not running, the user of the service might not have the necessary access.
-- Step 18: Enter the command ```sudo systemctl enable pythia`` to enable the service
+- Step 18: Enter the command ```sudo systemctl enable pythia``` to enable the service
 
 ## Setting up nginx
 - Step 1: Edit /pythia/template/nginx_pythia according to your configuration
 - Step 2: Move /pythia/template/nginx_pythia to /etc/nginx/sites-available
 - Step 3: Create link ```sudo ln -s /etc/nginx/sites-available/nginx_pythia /etc/nginx/sites-enabled ```
-- Step 3: Create firewall permission for nginx``` sudo ufw allow 'Nginx Full' ```
-- Step 4: Restart nginx service``` sudo systemctl restart nginx ```
+- Step 3: Create firewall permission for nginx ```sudo ufw allow 'Nginx Full' ```
+- Step 4: Restart nginx service ```sudo systemctl restart nginx```
 
 ## Source for production section
 https://stackabuse.com/single-page-apps-with-vue-js-and-flask-deployment
