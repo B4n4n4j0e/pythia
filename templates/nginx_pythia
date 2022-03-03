@@ -1,6 +1,5 @@
 server {
     listen 80;
-    server_name localhost;
 
     location /api {
         include uwsgi_params;
@@ -9,6 +8,6 @@ server {
 
   location / {
     root /opt/pythia/client/dist;
-    try_files $uri $uri/ /index.html;
+    try_files $uri /index.html;
   }
 }
