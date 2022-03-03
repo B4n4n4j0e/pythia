@@ -29,6 +29,7 @@ Before running pythia, you have to ensure, that the following dependencies are i
 - pythia_plugin (https://github.com/B4n4n4j0e/pythia_plugin)
 - Python 3.9 or higher
 - pip3 20.3.4 or higher
+- python3-venv
 - install npm 6.14.4 or higher
 - Git
 - cmake
@@ -36,7 +37,6 @@ Before running pythia, you have to ensure, that the following dependencies are i
 # Additional Dependencies for Production
 - python3-dev 
 - nginx
-- python3-venv
 
 # How to install for development
 If you don't want to setup a proxy for development, just download and install the branch dev. In this branch the flask_cors extension is used for the backend, which makes cross-origin AJAX possible.
@@ -63,16 +63,16 @@ If you don't want to setup a proxy for development, just download and install th
 
 	
 - Step 3: Switch to directory /pythia/server`
-- Step 4: (Optional): Create virtual environment: ``` python3 -m venv ./venv``` 
-- Step 5: (Optional): Activate virtual environment: ```source venv/bin/activate```
-- Step 6: Run the command ```pip3 -r requirements.txt```
+- Step 4: Create virtual environment: ``` python3 -m venv ./venv``` 
+- Step 5: Activate virtual environment: ```source venv/bin/activate```
+- Step 6: Run the command ```python3 -m pip install -r requirements.txt```
 - Step 7: For debugging purposes I would recommend to go to pythia/server/run.py and change the line ```app.run()``` to ```app.run(debug)```
 - Step 8: Run the application with ```python3 run.py```
 
 ## Frontend
-- Step 1: Switch to directory client and run 
+- Step 1: Switch to directory pythia/client and run 
 ```npm install```
-- Step 2: Switch directory to client and run 
+- Step 2: Switch directory to pythia/client and run 
 		```npm run serve``` 
 		which compiles and hot relaods for development
 
@@ -127,6 +127,9 @@ If you don't want to setup a proxy for development, just download and install th
 
 ## Source for production section
 https://stackabuse.com/single-page-apps-with-vue-js-and-flask-deployment
+<<<<<<< HEAD
 
 # Zeek configuration
 - Provide non-root users with the capability to use zeek ```sudo setcap cap_net_raw,cap_net_admin=eip /path/to/zeek```
+=======
+>>>>>>> 7a869c0213f94269a21c5ecd87dd67648c29b75c
